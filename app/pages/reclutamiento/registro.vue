@@ -164,7 +164,19 @@ async function onSubmit() {
         Volver al portal
       </VBtn>
 
-      <VCard class="registro-card" elevation="0">
+      <VCard class="registro-card" elevation="0" :loading="cargando">
+        <VOverlay
+          :model-value="cargando"
+          contained
+          persistent
+          scrim="#ffffff"
+          class="align-center justify-center"
+        >
+          <div class="registro-espera">
+            <VProgressCircular indeterminate size="48" color="#123e66" />
+            <span>Creando tu cuenta, por favor espera...</span>
+          </div>
+        </VOverlay>
         <header class="registro-cabecera">
           <span class="registro-etiqueta">Cooperativa Guayacán</span>
           <h1>Registro de candidatos</h1>
@@ -175,7 +187,12 @@ async function onSubmit() {
         </header>
 
         <VCardText class="registro-cuerpo">
-          <VForm ref="refForm" @submit.prevent="onSubmit">
+          <VForm
+            ref="refForm"
+            :disabled="cargando"
+            :aria-busy="cargando"
+            @submit.prevent="onSubmit"
+          >
             <section aria-labelledby="registro-nombres">
               <h2 id="registro-nombres" class="registro-seccion">
                 Nombres y apellidos
@@ -412,6 +429,15 @@ async function onSubmit() {
   border-radius: 1rem;
   background: #ffffff;
   box-shadow: 0 8px 28px -6px rgba(13, 46, 77, 0.08);
+}
+
+.registro-espera {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.75rem;
+  color: #123e66;
+  font-weight: 600;
 }
 
 .registro-cabecera {
