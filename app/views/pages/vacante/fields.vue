@@ -163,6 +163,19 @@ async function onSubmit() {
         />
       </VCol>
       <VCol cols="12" md="4">
+        <SelectorPro
+          v-model:item-selected="data.estado_id"
+          url="/api/catalogo/vacantes_estados"
+          item-value="id"
+          item-title="nombre"
+          :campos-a-filtrar="['nombre']"
+          :rules="[requiredValidator]"
+          label="Estado de la vacante"
+          placeholder="Selecciona un estado"
+          persistent-placeholder
+        />
+      </VCol>
+      <VCol cols="12" md="4">
         <AppSelect
           v-model="data.modalidad_trabajo"
           :items="modalidades"
