@@ -9,6 +9,19 @@ const menu = [
 ]
 
 const drawer = ref(false)
+
+const { perfil, estaAutenticado, cargarPerfil, logout } = useCandidatoSesion()
+
+onMounted(() => {
+  if (estaAutenticado.value && !perfil.value)
+    cargarPerfil()
+})
+
+const cerrarSesion = async () => {
+  drawer.value = false
+  await logout()
+  await navigateTo('/reclutamiento')
+}
 </script>
 
 <template>
@@ -47,13 +60,22 @@ const drawer = ref(false)
             {{ item.titulo }}
           </VBtn>
 
-          <VBtn to="/login" variant="text" prepend-icon="tabler-user">
-            Ingresar
-          </VBtn>
+          <template v-if="estaAutenticado">
+            <span class="portal-saludo">{{ perfil?.nombres ?? perfil?.email }}</span>
+            <VBtn variant="outlined" prepend-icon="tabler-logout" @click="cerrarSesion">
+              Salir
+            </VBtn>
+          </template>
 
-          <VBtn color="primary" to="/reclutamiento/registro">
-            Crear cuenta
-          </VBtn>
+          <template v-else>
+            <VBtn to="/reclutamiento/login" variant="text" prepend-icon="tabler-user">
+              Ingresar
+            </VBtn>
+
+            <VBtn color="primary" to="/reclutamiento/registro">
+              Crear cuenta
+            </VBtn>
+          </template>
         </nav>
       </VContainer>
     </VAppBar>
@@ -70,17 +92,25 @@ const drawer = ref(false)
           @click="drawer = false"
         />
         <VListItem
-          to="/login"
-          prepend-icon="tabler-user"
-          title="Ingresar"
-          @click="drawer = false"
+          v-if="estaAutenticado"
+          prepend-icon="tabler-logout"
+          title="Salir"
+          @click="cerrarSesion"
         />
-        <VListItem
-          to="/reclutamiento/registro"
-          prepend-icon="tabler-user-plus"
-          title="Crear cuenta"
-          @click="drawer = false"
-        />
+        <template v-else>
+          <VListItem
+            to="/reclutamiento/login"
+            prepend-icon="tabler-user"
+            title="Ingresar"
+            @click="drawer = false"
+          />
+          <VListItem
+            to="/reclutamiento/registro"
+            prepend-icon="tabler-user-plus"
+            title="Crear cuenta"
+            @click="drawer = false"
+          />
+        </template>
       </VList>
     </VNavigationDrawer>
 
@@ -105,6 +135,14 @@ const drawer = ref(false)
 </template>
 
 <style scoped>
+.portal-saludo {
+  max-inline-size: 14rem;
+  overflow: hidden;
+  font-weight: 600;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 .layout-wrapper.portal-layout {
   flex-direction: column;
   min-block-size: 100dvh;

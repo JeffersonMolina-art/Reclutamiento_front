@@ -1,4 +1,4 @@
-<script setup lang="ts">
+﻿<script setup lang="ts">
 import type { VForm } from 'vuetify/components/VForm'
 import type { CandidatoExternoInterface } from '@/types/reclutamiento'
 
@@ -79,37 +79,37 @@ const soloLetras = (valor: string) =>
   !valor || /^[\p{L}][\p{L} .'-]*$/u.test(valor) || 'Solo se permiten letras'
 
 const dpiValido = (valor: string | null) =>
-  /^[0-9]{13}$/.test(valor ?? '') || 'El DPI debe tener 13 dígitos'
+  /^[0-9]{13}$/.test(valor ?? '') || 'El DPI debe tener 13 dÃ­gitos'
 
 const telefonoValido = (valor: string | null) =>
-  /^[0-9]{8,11}$/.test(valor ?? '') || 'El teléfono debe tener entre 8 y 11 dígitos'
+  /^[0-9]{8,11}$/.test(valor ?? '') || 'El telÃ©fono debe tener entre 8 y 11 dÃ­gitos'
 
 function fechaNoFutura(valor: string | null) {
   if (!valor)
     return true
 
   if (!/^\d{4}-\d{2}-\d{2}$/.test(valor))
-    return 'Ingresa una fecha de nacimiento válida'
+    return 'Ingresa una fecha de nacimiento vÃ¡lida'
 
   const fecha = new Date(`${valor}T12:00:00`)
 
   if (Number.isNaN(fecha.getTime()) || fechaLocalISO(fecha) !== valor)
-    return 'Ingresa una fecha de nacimiento válida'
+    return 'Ingresa una fecha de nacimiento vÃ¡lida'
 
   return valor <= hoy || 'La fecha de nacimiento no puede ser futura'
 }
 
 const mayorDeEdad = (valor: string | null) =>
-  !valor || valor <= limiteEdad || 'Debes tener al menos 18 años'
+  !valor || valor <= limiteEdad || 'Debes tener al menos 18 aÃ±os'
 
 const passwordSegura = (valor: string) =>
   /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d).{8,72}$/.test(valor ?? '')
-  || 'Mínimo 8 caracteres, con mayúscula, minúscula y número'
+  || 'MÃ­nimo 8 caracteres, con mayÃºscula, minÃºscula y nÃºmero'
 
 const coincidePassword = (valor: string) =>
-  valor === data.value.password || 'Las contraseñas no coinciden'
+  valor === data.value.password || 'Las contraseÃ±as no coinciden'
 
-const aceptaTerminos = (valor: boolean) => valor || 'Debes aceptar los términos'
+const aceptaTerminos = (valor: boolean) => valor || 'Debes aceptar los tÃ©rminos'
 
 async function onSubmit() {
   if (!refForm.value || cargando.value)
@@ -130,7 +130,7 @@ async function onSubmit() {
     const vacante = route.query.vacante
 
     await navigateTo({
-      path: '/login',
+      path: '/reclutamiento/login',
       query: vacante ? { vacante: String(vacante) } : {},
     })
   }
@@ -178,7 +178,7 @@ async function onSubmit() {
           </div>
         </VOverlay>
         <header class="registro-cabecera">
-          <span class="registro-etiqueta">Cooperativa Guayacán</span>
+          <span class="registro-etiqueta">Cooperativa Guayacan</span>
           <h1>Registro de candidatos</h1>
           <p>
             Crea tu cuenta para postularte a nuestras vacantes y consultar
@@ -252,7 +252,7 @@ async function onSubmit() {
 
             <section aria-labelledby="registro-identificacion">
               <h2 id="registro-identificacion" class="registro-seccion">
-                Identificación
+                IdentificaciÃ³n
               </h2>
 
               <VRow>
@@ -261,7 +261,7 @@ async function onSubmit() {
                     v-model="data.dpi"
                     :rules="[requiredValidator, dpiValido]"
                     label="DPI"
-                    placeholder="13 dígitos sin espacios"
+                    placeholder="13 dÃ­gitos sin espacios"
                     type="text"
                     inputmode="numeric"
                     maxlength="13"
@@ -294,7 +294,7 @@ async function onSubmit() {
                   <AppTextField
                     v-model="data.email"
                     :rules="[requiredValidator, emailValidator]"
-                    label="Correo electrónico"
+                    label="Correo electrÃ³nico"
                     type="email"
                     autocomplete="email"
                     placeholder="correo@ejemplo.com"
@@ -305,7 +305,7 @@ async function onSubmit() {
                   <AppTextField
                     v-model="data.telefono"
                     :rules="[requiredValidator, telefonoValido]"
-                    label="Teléfono"
+                    label="TelÃ©fono"
                     type="tel"
                     inputmode="numeric"
                     maxlength="11"
@@ -329,8 +329,8 @@ async function onSubmit() {
                   <AppTextField
                     v-model="data.password"
                     :rules="[requiredValidator, passwordSegura]"
-                    label="Contraseña"
-                    placeholder="Mínimo 8 caracteres"
+                    label="ContraseÃ±a"
+                    placeholder="MÃ­nimo 8 caracteres"
                     :type="verPassword ? 'text' : 'password'"
                     autocomplete="new-password"
                   >
@@ -341,7 +341,7 @@ async function onSubmit() {
                         size="small"
                         density="comfortable"
                         :icon="verPassword ? 'tabler-eye-off' : 'tabler-eye'"
-                        :aria-label="verPassword ? 'Ocultar contraseñas' : 'Mostrar contraseñas'"
+                        :aria-label="verPassword ? 'Ocultar contraseÃ±as' : 'Mostrar contraseÃ±as'"
                         @click="verPassword = !verPassword"
                       />
                     </template>
@@ -352,8 +352,8 @@ async function onSubmit() {
                   <AppTextField
                     v-model="data.password_confirmation"
                     :rules="[requiredValidator, coincidePassword]"
-                    label="Confirmar contraseña"
-                    placeholder="Repite tu contraseña"
+                    label="Confirmar contraseÃ±a"
+                    placeholder="Repite tu contraseÃ±a"
                     :type="verPassword ? 'text' : 'password'"
                     autocomplete="new-password"
                   />
@@ -384,12 +384,12 @@ async function onSubmit() {
               </VBtn>
 
               <p class="registro-login-texto">
-                ¿Ya tienes una cuenta?
+                Â¿Ya tienes una cuenta?
                 <NuxtLink
-                  :to="{ path: '/login', query: route.query.vacante ? { vacante: String(route.query.vacante) } : {} }"
+                  :to="{ path: '/reclutamiento/login', query: route.query.vacante ? { vacante: String(route.query.vacante) } : {} }"
                   class="registro-login-enlace"
                 >
-                  Inicia sesión
+                  Inicia sesiÃ³n
                 </NuxtLink>
               </p>
             </div>
