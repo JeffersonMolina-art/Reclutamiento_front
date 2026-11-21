@@ -1,5 +1,5 @@
 // clases/archivo/GestorDeArchivos.ts
-import { ref, Ref } from 'vue'
+import { ref, type Ref } from 'vue'
 import { Archivo } from './Archivo'
 
 export class GestorDeArchivos {
