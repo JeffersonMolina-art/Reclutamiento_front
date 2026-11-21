@@ -22,6 +22,25 @@ const buscar = ref<string | null>('')
 const busquedaAplicada = ref('')
 const pagina = ref(1)
 const totalPaginas = ref(1)
+const modalDetalle = ref(false)
+const vacanteSeleccionada = ref<(typeof tarjetas.value)[number] | null>(null)
+
+const formatoFecha = new Intl.DateTimeFormat('es-GT', {
+  dateStyle: 'long',
+  timeZone: 'UTC',
+})
+function fechaPublicacionVisible(fecha?: string | null) {
+  if (!fecha)
+    return null
+
+  const valor = new Date(fecha)
+
+  return Number.isNaN(valor.getTime()) ? null : formatoFecha.format(valor)
+}
+function abrirDetalle(vacante: (typeof tarjetas.value)[number]) {
+  vacanteSeleccionada.value = vacante
+  modalDetalle.value = true
+}
 
 let temporizador: ReturnType<typeof setTimeout> | undefined
 let solicitudActual = 0
@@ -242,16 +261,13 @@ onBeforeUnmount(() => {
               </div>
 
               <VBtn
-                color="#123e66"
-                variant="flat"
+                color="success"
                 class="vacante-aplicar"
-                :to="{
-                  path: '/reclutamiento/registro',
-                  query: { vacante: String(vacante.id) },
-                }"
-                :aria-label="'Postularme a ' + vacante.nombre"
+                prepend-icon="tabler-file-description"
+                :aria-label="'Ver detalles de ' + vacante.nombre"
+                @click="abrirDetalle(vacante)"
               >
-                Postularme
+                Ver detalles
               </VBtn>
             </div>
           </VCard>
@@ -267,6 +283,147 @@ onBeforeUnmount(() => {
         class="mt-7"
       />
     </VContainer>
+    <ModalBasico
+      v-model:mostrar-modal="modalDetalle"
+      :titulo="vacanteSeleccionada?.nombre"
+      :subtitulo="[
+    vacanteSeleccionada?.puesto,
+    vacanteSeleccionada?.sede,
+  ].filter(Boolean).join(' · ')"
+      :card-props="{ class: 'detalle-vacante' }"
+      max-width="760"
+      scrollable
+      :aria-label="vacanteSeleccionada?.nombre || 'Detalle de vacante'"
+    >
+      <div v-if="vacanteSeleccionada" class="detalle-cuerpo">
+        <dl class="detalle-datos">
+          <div v-if="vacanteSeleccionada.modalidad_trabajo" class="detalle-dato">
+        <span class="detalle-icono" aria-hidden="true">
+          <VIcon icon="tabler-device-laptop" size="21" />
+        </span>
+            <div>
+              <dt>Modalidad</dt>
+              <dd>{{ modalidadVisible(vacanteSeleccionada.modalidad_trabajo) }}</dd>
+            </div>
+          </div>
+
+          <div v-if="vacanteSeleccionada.cantidad_plazas != null" class="detalle-dato">
+        <span class="detalle-icono" aria-hidden="true">
+          <VIcon icon="tabler-users" size="21" />
+        </span>
+            <div>
+              <dt>Plazas disponibles</dt>
+              <dd>{{ vacanteSeleccionada.cantidad_plazas }}</dd>
+            </div>
+          </div>
+
+          <div v-if="vacanteSeleccionada.rangoSalarial" class="detalle-dato detalle-dato--salario">
+        <span class="detalle-icono" aria-hidden="true">
+          <VIcon icon="tabler-wallet" size="21" />
+        </span>
+            <div>
+              <dt>Rango salarial</dt>
+              <dd>{{ vacanteSeleccionada.rangoSalarial }}</dd>
+            </div>
+          </div>
+
+          <div
+            v-if="fechaPublicacionVisible(vacanteSeleccionada.fecha_publicacion)"
+            class="detalle-dato"
+          >
+        <span class="detalle-icono" aria-hidden="true">
+          <VIcon icon="tabler-calendar-event" size="21" />
+        </span>
+            <div>
+              <dt>Fecha de publicación</dt>
+              <dd>{{ fechaPublicacionVisible(vacanteSeleccionada.fecha_publicacion) }}</dd>
+            </div>
+          </div>
+        </dl>
+
+        <section
+          v-if="vacanteSeleccionada.descripcion"
+          class="detalle-seccion"
+          aria-labelledby="detalle-titulo-descripcion"
+        >
+          <h3 id="detalle-titulo-descripcion">Descripción del puesto</h3>
+          <p class="detalle-descripcion">
+            {{ vacanteSeleccionada.descripcion }}
+          </p>
+        </section>
+
+        <section
+          v-if="vacanteSeleccionada.caracteristicas?.length"
+          class="detalle-seccion"
+          aria-labelledby="detalle-titulo-caracteristicas"
+        >
+          <h3 id="detalle-titulo-caracteristicas">Características</h3>
+
+          <dl class="detalle-lista">
+            <div
+              v-for="(item, indice) in vacanteSeleccionada.caracteristicas"
+              :key="indice"
+              class="detalle-fila"
+            >
+              <dt>{{ item.nombre }}</dt>
+              <dd>{{ item.valor || 'Por confirmar' }}</dd>
+            </div>
+          </dl>
+        </section>
+
+        <section
+          v-if="vacanteSeleccionada.requisitos?.length"
+          class="detalle-seccion"
+          aria-labelledby="detalle-titulo-requisitos"
+        >
+          <h3 id="detalle-titulo-requisitos">Requisitos</h3>
+
+          <ul class="detalle-lista">
+            <li
+              v-for="(item, indice) in vacanteSeleccionada.requisitos"
+              :key="indice"
+              class="detalle-fila"
+            >
+          <span class="detalle-requisito">
+            <VIcon
+              icon="tabler-check"
+              size="18"
+              class="detalle-check"
+              aria-hidden="true"
+            />
+            <span>{{ item.nombre }}</span>
+          </span>
+
+              <VChip
+                size="small"
+                variant="tonal"
+                :color="item.es_obligatorio ? '#123e66' : '#375e2d'"
+              >
+                {{ item.es_obligatorio ? 'Obligatorio' : 'Deseable' }}
+              </VChip>
+            </li>
+          </ul>
+        </section>
+
+        <div class="detalle-acciones">
+          <VBtn variant="text" @click="modalDetalle = false">
+            Cerrar
+          </VBtn>
+
+          <VBtn
+            color="#123e66"
+            variant="flat"
+            prepend-icon="tabler-send"
+            :to="{
+          path: '/reclutamiento/registro',
+          query: { vacante: String(vacanteSeleccionada.id) },
+        }"
+          >
+            Postularme
+          </VBtn>
+        </div>
+      </div>
+    </ModalBasico>
   </div>
 </template>
 
@@ -475,6 +632,165 @@ onBeforeUnmount(() => {
 
   .vacante-aplicar {
     inline-size: 100%;
+  }
+}
+
+:global(.detalle-vacante.v-card) {
+  border: 1px solid rgba(var(--v-border-color), var(--v-border-opacity));
+  border-radius: 1.125rem;
+}
+
+:global(.detalle-vacante > .v-card-item) {
+  padding: 1.25rem 1.5rem .75rem;
+}
+
+:global(.detalle-vacante > .v-card-item .v-card-title) {
+  color: rgb(var(--v-theme-on-surface));
+  font-size: 1.375rem;
+  font-weight: 700;
+  line-height: 1.3;
+  white-space: normal;
+  overflow-wrap: anywhere;
+}
+
+:global(.detalle-vacante > .v-card-item .v-card-subtitle) {
+  margin-block-start: .25rem;
+  font-size: .9375rem;
+  white-space: normal;
+  overflow-wrap: anywhere;
+}
+
+:global(.detalle-vacante > .v-card-text) {
+  padding: 0;
+}
+
+.detalle-cuerpo {
+  --detalle-borde: rgba(var(--v-border-color), var(--v-border-opacity));
+  padding: clamp(1rem, 4vw, 1.75rem);
+}
+
+.detalle-datos {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: .75rem;
+  margin: 0;
+}
+
+.detalle-dato {
+  display: flex;
+  align-items: flex-start;
+  gap: .7rem;
+  min-inline-size: 0;
+  padding: .85rem;
+  border: 1px solid var(--detalle-borde);
+  border-radius: .8rem;
+  background: rgb(18 62 102 / 5%);
+}
+
+.detalle-dato--salario {
+  background: rgb(128 185 78 / 12%);
+}
+
+.detalle-icono {
+  display: grid;
+  flex: 0 0 2.25rem;
+  place-items: center;
+  block-size: 2.25rem;
+  border-radius: .6rem;
+  background: #e6eff8;
+  color: #123e66;
+}
+
+.detalle-dato--salario .detalle-icono {
+  background: #e5f0dc;
+  color: #375e2d;
+}
+
+.detalle-dato dt {
+  margin-block-end: .15rem;
+  font-size: .875rem;
+}
+
+.detalle-dato dd,
+.detalle-fila dd {
+  margin: 0;
+  font-weight: 700;
+  overflow-wrap: anywhere;
+}
+
+.detalle-seccion {
+  margin-block-start: 1.5rem;
+}
+
+.detalle-seccion h3 {
+  margin: 0 0 .7rem;
+  font-size: 1.125rem;
+  font-weight: 750;
+}
+
+.detalle-descripcion {
+  margin: 0;
+  line-height: 1.65;
+  white-space: pre-line;
+  overflow-wrap: anywhere;
+}
+
+.detalle-lista {
+  margin: 0;
+  padding: 0;
+  overflow: hidden;
+  border: 1px solid var(--detalle-borde);
+  border-radius: .8rem;
+  list-style: none;
+}
+
+.detalle-fila {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: .5rem 1rem;
+  padding: .75rem .9rem;
+  overflow-wrap: anywhere;
+}
+
+.detalle-fila + .detalle-fila {
+  border-block-start: 1px solid var(--detalle-borde);
+}
+
+.detalle-requisito {
+  display: flex;
+  flex: 1 1 14rem;
+  align-items: flex-start;
+  gap: .5rem;
+  min-inline-size: 0;
+}
+
+.detalle-check {
+  flex-shrink: 0;
+  margin-block-start: .1rem;
+  color: #56833e;
+}
+
+.detalle-acciones {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: .65rem;
+  margin-block-start: 1.5rem;
+  padding-block-start: 1rem;
+  border-block-start: 1px solid var(--detalle-borde);
+}
+
+@media (max-width: 540px) {
+  .detalle-datos {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 360px) {
+  .detalle-acciones > * {
+    flex: 1 1 100%;
   }
 }
 </style>
