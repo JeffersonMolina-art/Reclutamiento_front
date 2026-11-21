@@ -1,6 +1,5 @@
 <script setup lang="ts">
 import type { VForm } from 'vuetify/components/VForm'
-import type { Ref } from 'vue'
 definePageMeta({
   layout: 'portal',
   public: true,
@@ -23,7 +22,7 @@ interface EstadoCv {
 }
 
 const { peticion, estaAutenticado, token } = useCandidatoSesion()
-const { showToastSuccess, showToastError } = useToast()
+const { showToastSuccess, showToastError, preguntaEliminar } = useToast()
 
 const cargando = ref(true)
 const guardandoDatos = ref(false)
@@ -154,7 +153,7 @@ async function guardarDatos() {
   }
 }
 
-// ---- Conocimientos, experiencias y formaciones ----
+// CONOCIMIENTOS, EXPERIENCIAS, FORMACIONES
 const dialogo = ref(false)
 const recurso = ref<Recurso>('conocimientos')
 const itemId = ref<number | null>(null)
@@ -220,7 +219,18 @@ async function recargarLista(r: Recurso) {
 }
 
 async function eliminarItem(r: Recurso, item: any) {
-  if (!window.confirm(`¿Eliminar este registro de ${titulos[r]}?`))
+  const preguntas: Record<Recurso, string> = {
+    formaciones: '¿Eliminar esta formación académica?',
+    experiencias: '¿Eliminar esta experiencia laboral?',
+    conocimientos: '¿Eliminar este conocimiento o habilidad?',
+  }
+
+  const confirmado = await preguntaEliminar(
+    preguntas[r],
+    'El registro se quitará de tu perfil.',
+  )
+
+  if (!confirmado)
     return
 
   try {
@@ -234,7 +244,7 @@ async function eliminarItem(r: Recurso, item: any) {
   }
 }
 
-// ---- Currículum ----
+// CURRÍCULUM
 async function subirCv() {
   const archivo = archivoCv.value[0]
 
@@ -265,7 +275,6 @@ async function subirCv() {
     subiendoCv.value = false
   }
 }
-
 async function descargarCv() {
   try {
     const blob = await peticion<Blob>('/api/portal/perfil/cv/descargar', { responseType: 'blob' })
@@ -282,25 +291,54 @@ async function descargarCv() {
       showToastError('No se pudo descargar el currículum')
   }
 }
-
 async function eliminarCv() {
-  if (!window.confirm('¿Eliminar tu currículum? No podrás postularte hasta subir uno nuevo.'))
+  const confirmado = await preguntaEliminar(
+    '¿Eliminar tu currículum?',
+    'Para volver a postularte, tendrás que subir un currículum nuevo.',
+  )
+
+  if (!confirmado)
     return
 
   try {
     await peticion('/api/portal/perfil/cv', { method: 'DELETE' })
-    cv.value = { tiene_cv: false, vigente: false, requiere_actualizar: true, motivo: 'Aún no has subido tu CV.' }
+
+    cv.value = {
+      tiene_cv: false,
+      vigente: false,
+      requiere_actualizar: true,
+      motivo: 'Aún no has subido tu CV.',
+    }
+
     showToastSuccess('Currículum eliminado.')
   }
   catch (error) {
     if (!(await sesionExpirada(error)))
-      showToastError('No se pudo eliminar el currículum')
+      showToastError('No se pudo eliminar el currículum.')
   }
 }
-
 const tamanoVisible = (bytes?: number) => bytes ? `${(bytes / 1024 / 1024).toFixed(2)} MB` : ''
+const archivoCvSeleccionado = computed(() => {
+  const seleccion = archivoCv.value
 
+  return Array.isArray(seleccion)
+    ? seleccion[0] ?? null
+    : seleccion ?? null
+})
 
+const urlVistaPreviaCv = ref<string | null>(null)
+
+watch(archivoCvSeleccionado, (archivo, _anterior, limpiar) => {
+  urlVistaPreviaCv.value = null
+
+  if (!archivo || !/\.pdf$/i.test(archivo.name))
+    return
+
+  const url = URL.createObjectURL(archivo)
+
+  urlVistaPreviaCv.value = url
+  limpiar(() => URL.revokeObjectURL(url))
+})
 onMounted(() => {
   if (!estaAutenticado.value)
     return navigateTo('/reclutamiento/login')
@@ -331,9 +369,20 @@ onMounted(() => {
       <template v-else>
         <!-- Currículum -->
         <VCard class="perfil-card" elevation="0">
-          <h2 class="perfil-seccion">
-            Currículum (CV)
-          </h2>
+          <div class="d-flex align-center ga-3 mb-4">
+            <VAvatar color="primary" variant="tonal" rounded="lg" size="44">
+              <VIcon icon="tabler-file-cv" size="24" />
+            </VAvatar>
+
+            <div>
+              <h2 class="perfil-seccion mb-0">
+                Currículum (CV)
+              </h2>
+              <p class="text-body-2 text-medium-emphasis mb-0">
+                Adjunta un PDF, DOC o DOCX de hasta 5 MB.
+              </p>
+            </div>
+          </div>
 
           <VAlert
             v-if="cv?.requiere_actualizar"
@@ -345,19 +394,35 @@ onMounted(() => {
           </VAlert>
 
           <div v-if="cv?.tiene_cv" class="perfil-cv-actual">
-            <VIcon icon="tabler-file-cv" size="32" aria-hidden="true" />
+            <VIcon icon="tabler-file-check" size="28" aria-hidden="true" />
+
             <div>
-              <strong>CV cargado ({{ cv.extension?.toUpperCase() }}, {{ tamanoVisible(cv.tamano) }})</strong>
-              <small>Vigente hasta {{ cv.vence_el }}</small>
+              <strong>
+                CV cargado ({{ cv.extension?.toUpperCase() }}, {{ tamanoVisible(cv.tamano) }})
+              </strong>
+              <small v-if="cv.vence_el">Vigente hasta {{ cv.vence_el }}</small>
             </div>
+
             <VSpacer />
-            <VBtn variant="tonal" prepend-icon="tabler-download" @click="descargarCv">
+
+            <VBtn
+              variant="tonal"
+              prepend-icon="tabler-download"
+              @click="descargarCv"
+            >
               Descargar
             </VBtn>
-            <VBtn variant="text" color="error" icon="tabler-trash" aria-label="Eliminar currículum" @click="eliminarCv" />
+
+            <VBtn
+              variant="text"
+              color="error"
+              icon="tabler-trash"
+              aria-label="Eliminar currículum"
+              @click="eliminarCv"
+            />
           </div>
 
-          <div class="perfil-cv-subir">
+          <div class="cv-carga mt-4">
             <InputFile
               :key="claveInputCv"
               v-model:archivos="archivoCv"
@@ -366,17 +431,23 @@ onMounted(() => {
               :max-size-mb="5"
               :lectura="subiendoCv"
             />
-            <VBtn
-              color="#123e66"
-              :loading="subiendoCv"
-              :disabled="!archivoCv?.length || subiendoCv"
-              @click="subirCv"
-            >
-              Guardar CV
-            </VBtn>
+
+            <VDivider />
+
+            <div class="d-flex justify-end">
+              <VBtn
+                color="#123e66"
+                variant="flat"
+                prepend-icon="tabler-device-floppy"
+                :loading="subiendoCv"
+                :disabled="!archivoCvSeleccionado || subiendoCv"
+                @click="subirCv"
+              >
+                Guardar CV
+              </VBtn>
+            </div>
           </div>
         </VCard>
-
         <!-- Datos personales -->
         <VCard class="perfil-card" elevation="0">
           <h2 class="perfil-seccion">
@@ -450,91 +521,176 @@ onMounted(() => {
             </VBtn>
           </VForm>
         </VCard>
+        <!-- Formación académica -->
+        <VCard class="trayectoria-card trayectoria-card--formacion" elevation="0">
+          <header class="trayectoria-cabecera">
+            <div class="trayectoria-titulo">
+      <span class="trayectoria-icono">
+        <VIcon icon="tabler-school" size="24" />
+      </span>
+              <h2>Formación académica</h2>
+            </div>
 
-        <!-- Formación -->
-        <VCard class="perfil-card" elevation="0">
-          <div class="perfil-seccion-cabecera">
-            <h2 class="perfil-seccion">
-              Formación académica
-            </h2>
-            <VBtn variant="tonal" prepend-icon="tabler-plus" @click="abrirDialogo('formaciones')">
+            <VBtn
+              class="trayectoria-agregar"
+              variant="tonal"
+              prepend-icon="tabler-plus"
+              aria-label="Agregar formación académica"
+              @click="abrirDialogo('formaciones')"
+            >
               Agregar
             </VBtn>
+          </header>
+
+          <div v-if="!formaciones.length" class="trayectoria-vacio">
+            <VIcon icon="tabler-book-2" size="22" />
+            <p>Agrega tus estudios, títulos o carreras.</p>
           </div>
 
-          <p v-if="!formaciones.length" class="perfil-vacio">
-            Aún no has agregado formación académica.
-          </p>
-
-          <ul v-else class="perfil-lista">
-            <li v-for="item in formaciones" :key="item.id">
-              <div>
+          <ul v-else class="trayectoria-lista">
+            <li v-for="item in formaciones" :key="item.id" class="trayectoria-fila">
+              <div class="trayectoria-datos">
                 <strong>{{ item.titulo_carrera || item.nombre }}</strong>
                 <span v-if="item.titulo_carrera">{{ item.nombre }}</span>
-                <small>{{ periodo(item) }}</small>
+                <small v-if="item.fecha_inicio" class="trayectoria-periodo">
+                  <VIcon icon="tabler-calendar" size="15" />
+                  {{ periodo(item) }}
+                </small>
               </div>
-              <div class="perfil-acciones">
-                <VBtn icon="tabler-edit" variant="text" size="small" aria-label="Editar" @click="abrirDialogo('formaciones', item)" />
-                <VBtn icon="tabler-trash" variant="text" size="small" color="error" aria-label="Eliminar" @click="eliminarItem('formaciones', item)" />
+
+              <div class="trayectoria-acciones">
+                <VBtn
+                  icon="tabler-edit"
+                  variant="text"
+                  size="small"
+                  :aria-label="'Editar ' + (item.titulo_carrera || item.nombre)"
+                  @click="abrirDialogo('formaciones', item)"
+                />
+                <VBtn
+                  icon="tabler-trash"
+                  variant="text"
+                  size="small"
+                  color="error"
+                  :aria-label="'Eliminar ' + (item.titulo_carrera || item.nombre)"
+                  @click="eliminarItem('formaciones', item)"
+                />
               </div>
             </li>
           </ul>
         </VCard>
+        <!-- Experiencia laboral -->
+        <VCard class="trayectoria-card trayectoria-card--experiencia" elevation="0">
+          <header class="trayectoria-cabecera">
+            <div class="trayectoria-titulo">
+      <span class="trayectoria-icono">
+        <VIcon icon="tabler-briefcase" size="24" />
+      </span>
+              <h2>Experiencia laboral</h2>
+            </div>
 
-        <!-- Experiencia -->
-        <VCard class="perfil-card" elevation="0">
-          <div class="perfil-seccion-cabecera">
-            <h2 class="perfil-seccion">
-              Experiencia laboral
-            </h2>
-            <VBtn variant="tonal" prepend-icon="tabler-plus" @click="abrirDialogo('experiencias')">
+            <VBtn
+              class="trayectoria-agregar"
+              variant="tonal"
+              prepend-icon="tabler-plus"
+              aria-label="Agregar experiencia laboral"
+              @click="abrirDialogo('experiencias')"
+            >
               Agregar
             </VBtn>
+          </header>
+
+          <div v-if="!experiencias.length" class="trayectoria-vacio">
+            <VIcon icon="tabler-building" size="22" />
+            <p>Agrega los puestos que has desempeñado.</p>
           </div>
 
-          <p v-if="!experiencias.length" class="perfil-vacio">
-            Aún no has agregado experiencia laboral.
-          </p>
-
-          <ul v-else class="perfil-lista">
-            <li v-for="item in experiencias" :key="item.id">
-              <div>
+          <ul v-else class="trayectoria-lista">
+            <li v-for="item in experiencias" :key="item.id" class="trayectoria-fila">
+              <div class="trayectoria-datos">
                 <strong>{{ item.puesto || item.empresa }}</strong>
                 <span v-if="item.puesto">{{ item.empresa }}</span>
-                <small>{{ periodo(item) }}</small>
+                <small v-if="item.fecha_inicio" class="trayectoria-periodo">
+                  <VIcon icon="tabler-calendar" size="15" />
+                  {{ periodo(item) }}
+                </small>
               </div>
-              <div class="perfil-acciones">
-                <VBtn icon="tabler-edit" variant="text" size="small" aria-label="Editar" @click="abrirDialogo('experiencias', item)" />
-                <VBtn icon="tabler-trash" variant="text" size="small" color="error" aria-label="Eliminar" @click="eliminarItem('experiencias', item)" />
+
+              <div class="trayectoria-acciones">
+                <VBtn
+                  icon="tabler-edit"
+                  variant="text"
+                  size="small"
+                  :aria-label="'Editar ' + (item.puesto || item.empresa)"
+                  @click="abrirDialogo('experiencias', item)"
+                />
+                <VBtn
+                  icon="tabler-trash"
+                  variant="text"
+                  size="small"
+                  color="error"
+                  :aria-label="'Eliminar ' + (item.puesto || item.empresa)"
+                  @click="eliminarItem('experiencias', item)"
+                />
               </div>
             </li>
           </ul>
         </VCard>
+        <!-- Conocimientos y habilidades -->
+        <VCard class="trayectoria-card trayectoria-card--habilidades" elevation="0">
+          <header class="trayectoria-cabecera">
+            <div class="trayectoria-titulo">
+      <span class="trayectoria-icono">
+        <VIcon icon="tabler-bulb" size="24" />
+      </span>
+              <h2>Conocimientos y habilidades</h2>
+            </div>
 
-        <!-- Conocimientos -->
-        <VCard class="perfil-card" elevation="0">
-          <div class="perfil-seccion-cabecera">
-            <h2 class="perfil-seccion">
-              Conocimientos y habilidades
-            </h2>
-            <VBtn variant="tonal" prepend-icon="tabler-plus" @click="abrirDialogo('conocimientos')">
+            <VBtn
+              class="trayectoria-agregar"
+              variant="tonal"
+              prepend-icon="tabler-plus"
+              aria-label="Agregar conocimiento o habilidad"
+              @click="abrirDialogo('conocimientos')"
+            >
               Agregar
             </VBtn>
+          </header>
+
+          <div v-if="!conocimientos.length" class="trayectoria-vacio">
+            <VIcon icon="tabler-tools" size="22" />
+            <p>Agrega habilidades, herramientas o conocimientos que dominas.</p>
           </div>
 
-          <p v-if="!conocimientos.length" class="perfil-vacio">
-            Aún no has agregado conocimientos.
-          </p>
-
-          <ul v-else class="perfil-lista">
-            <li v-for="item in conocimientos" :key="item.id">
-              <div>
+          <ul v-else class="trayectoria-lista">
+            <li v-for="item in conocimientos" :key="item.id" class="trayectoria-fila">
+              <div class="trayectoria-datos">
                 <strong>{{ item.descripcion }}</strong>
-                <small v-if="item.nivel">Nivel: {{ item.nivel }}</small>
+                <VChip
+                  v-if="item.nivel"
+                  class="trayectoria-nivel"
+                  size="small"
+                  variant="tonal"
+                >
+                  Nivel {{ item.nivel }}
+                </VChip>
               </div>
-              <div class="perfil-acciones">
-                <VBtn icon="tabler-edit" variant="text" size="small" aria-label="Editar" @click="abrirDialogo('conocimientos', item)" />
-                <VBtn icon="tabler-trash" variant="text" size="small" color="error" aria-label="Eliminar" @click="eliminarItem('conocimientos', item)" />
+
+              <div class="trayectoria-acciones">
+                <VBtn
+                  icon="tabler-edit"
+                  variant="text"
+                  size="small"
+                  :aria-label="'Editar ' + item.descripcion"
+                  @click="abrirDialogo('conocimientos', item)"
+                />
+                <VBtn
+                  icon="tabler-trash"
+                  variant="text"
+                  size="small"
+                  color="error"
+                  :aria-label="'Eliminar ' + item.descripcion"
+                  @click="eliminarItem('conocimientos', item)"
+                />
               </div>
             </li>
           </ul>
@@ -542,101 +698,143 @@ onMounted(() => {
       </template>
     </VContainer>
 
-    <VDialog v-model="dialogo" max-width="520" :persistent="guardandoItem">
-      <VCard class="pa-2">
-        <VCardTitle>{{ itemId ? 'Editar' : 'Agregar' }} {{ titulos[recurso] }}</VCardTitle>
+    <ModalBasico
+      v-model:mostrar-modal="dialogo"
+      :titulo="(itemId ? 'Editar ' : 'Agregar ') + titulos[recurso]"
+      :aria-label="(itemId ? 'Editar ' : 'Agregar ') + titulos[recurso]"
+      :card-props="{ rounded: 'xl' }"
+      :persistent="guardandoItem"
+      max-width="560"
+      scrollable
+    >
+      <VForm
+        ref="refFormItem"
+        class="trayectoria-formulario"
+        :disabled="guardandoItem"
+        @submit.prevent="guardarItem"
+      >
+        <VRow>
+          <template v-if="recurso === 'conocimientos'">
+            <VCol cols="12">
+              <AppTextField
+                v-model="form.descripcion"
+                :rules="[requiredValidator]"
+                label="Conocimiento o habilidad"
+                placeholder="Ej. Microsoft Excel"
+                prepend-inner-icon="tabler-bulb"
+                maxlength="255"
+              />
+            </VCol>
 
-        <VCardText>
-          <VForm ref="refFormItem" :disabled="guardandoItem" @submit.prevent="guardarItem">
-            <VRow>
-              <template v-if="recurso === 'conocimientos'">
-                <VCol cols="12">
-                  <AppTextField v-model="form.descripcion" :rules="[requiredValidator]" label="Conocimiento o habilidad" maxlength="255" />
-                </VCol>
-                <VCol cols="12">
-                  <AppSelect v-model="form.nivel" :items="niveles" label="Nivel (opcional)" clearable />
-                </VCol>
-              </template>
+            <VCol cols="12">
+              <AppSelect
+                v-model="form.nivel"
+                :items="niveles"
+                label="Nivel (opcional)"
+                clearable
+              />
+            </VCol>
+          </template>
 
-              <template v-else>
-                <VCol cols="12">
-                  <AppTextField
-                    v-if="recurso === 'experiencias'"
-                    v-model="form.empresa"
-                    :rules="[requiredValidator]"
-                    label="Empresa"
-                    maxlength="255"
-                  />
-                  <AppTextField
-                    v-else
-                    v-model="form.nombre"
-                    :rules="[requiredValidator]"
-                    label="Institución"
-                    maxlength="255"
-                  />
-                </VCol>
-                <VCol cols="12">
-                  <AppTextField
-                    v-if="recurso === 'experiencias'"
-                    v-model="form.puesto"
-                    label="Puesto (opcional)"
-                    maxlength="45"
-                  />
-                  <AppTextField
-                    v-else
-                    v-model="form.titulo_carrera"
-                    label="Título o carrera (opcional)"
-                    maxlength="255"
-                  />
-                </VCol>
-                <VCol cols="12" md="6">
-                  <AppTextField
-                    v-model="form.fecha_inicio"
-                    :rules="[requiredValidator]"
-                    label="Fecha de inicio"
-                    type="date"
-                    :max="hoy"
-                  />
-                </VCol>
-                <VCol cols="12" md="6">
-                  <AppTextField
-                    v-model="form.fecha_fin"
-                    label="Fecha de fin"
-                    type="date"
-                    :min="form.fecha_inicio"
-                    :max="hoy"
-                    :disabled="actual"
-                  />
-                </VCol>
-                <VCol cols="12">
-                  <VCheckbox
-                    v-model="actual"
-                    density="comfortable"
-                    :label="recurso === 'experiencias' ? 'Trabajo aquí actualmente' : 'Estudio aquí actualmente'"
-                    hide-details
-                  />
-                </VCol>
-              </template>
-            </VRow>
-          </VForm>
-        </VCardText>
+          <template v-else>
+            <VCol cols="12">
+              <AppTextField
+                v-if="recurso === 'experiencias'"
+                key="empresa"
+                v-model="form.empresa"
+                :rules="[requiredValidator]"
+                label="Empresa"
+                prepend-inner-icon="tabler-building"
+                maxlength="255"
+              />
+              <AppTextField
+                v-else
+                key="institucion"
+                v-model="form.nombre"
+                :rules="[requiredValidator]"
+                label="Institución"
+                prepend-inner-icon="tabler-school"
+                maxlength="255"
+              />
+            </VCol>
 
-        <VCardActions class="justify-end">
-          <VBtn variant="text" :disabled="guardandoItem" @click="dialogo = false">
+            <VCol cols="12">
+              <AppTextField
+                v-if="recurso === 'experiencias'"
+                key="puesto"
+                v-model="form.puesto"
+                label="Puesto (opcional)"
+                maxlength="45"
+              />
+              <AppTextField
+                v-else
+                key="carrera"
+                v-model="form.titulo_carrera"
+                label="Título o carrera (opcional)"
+                maxlength="255"
+              />
+            </VCol>
+
+            <VCol cols="12" sm="6">
+              <AppTextField
+                v-model="form.fecha_inicio"
+                :rules="[requiredValidator]"
+                label="Fecha de inicio"
+                type="date"
+                :max="hoy"
+              />
+            </VCol>
+
+            <VCol cols="12" sm="6">
+              <AppTextField
+                v-model="form.fecha_fin"
+                label="Fecha de fin"
+                type="date"
+                :min="form.fecha_inicio"
+                :max="hoy"
+                :disabled="actual"
+              />
+            </VCol>
+
+            <VCol cols="12">
+              <div class="trayectoria-actual">
+                <VCheckbox
+                  v-model="actual"
+                  color="primary"
+                  density="compact"
+                  :label="recurso === 'experiencias'
+                ? 'Trabajo aquí actualmente'
+                : 'Estudio aquí actualmente'"
+                  hide-details
+                />
+              </div>
+            </VCol>
+          </template>
+        </VRow>
+
+        <div class="trayectoria-formulario-acciones">
+          <VBtn
+            type="button"
+            variant="text"
+            :disabled="guardandoItem"
+            @click="dialogo = false"
+          >
             Cancelar
           </VBtn>
+
           <VBtn
-            color="#123e66"
+            type="submit"
+            color="primary"
             variant="flat"
+            prepend-icon="tabler-device-floppy"
             :loading="guardandoItem"
             :disabled="guardandoItem"
-            @click="guardarItem"
           >
             Guardar
           </VBtn>
-        </VCardActions>
-      </VCard>
-    </VDialog>
+        </div>
+      </VForm>
+    </ModalBasico>
   </div>
 </template>
 
@@ -786,5 +984,145 @@ onMounted(() => {
 .perfil-vacio {
   margin: 0;
   color: rgba(var(--v-theme-on-surface), var(--v-medium-emphasis-opacity));
+}
+
+.trayectoria-card {
+  --trayectoria-acento: var(--v-theme-primary);
+
+  padding: clamp(1rem, 3vw, 1.5rem);
+  border: 1px solid rgba(var(--v-border-color), var(--v-border-opacity));
+  border-radius: 18px;
+}
+
+.trayectoria-card--experiencia {
+  --trayectoria-acento: var(--v-theme-success);
+}
+
+.trayectoria-card--habilidades {
+  --trayectoria-acento: var(--v-theme-info);
+}
+
+.trayectoria-cabecera,
+.trayectoria-titulo {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.trayectoria-cabecera {
+  flex-wrap: wrap;
+  justify-content: space-between;
+  margin-block-end: 1rem;
+}
+
+.trayectoria-titulo h2 {
+  margin: 0;
+  font-size: clamp(1.05rem, 2vw, 1.25rem);
+  font-weight: 700;
+  line-height: 1.3;
+}
+
+.trayectoria-icono {
+  display: grid;
+  flex: 0 0 44px;
+  place-items: center;
+  block-size: 44px;
+  border-radius: 12px;
+  background: rgba(var(--trayectoria-acento), 0.11);
+  color: rgb(var(--trayectoria-acento));
+}
+
+.trayectoria-agregar {
+  color: rgb(var(--trayectoria-acento));
+}
+
+.trayectoria-lista {
+  display: grid;
+  gap: 0.65rem;
+  padding: 0;
+  margin: 0;
+  list-style: none;
+}
+
+.trayectoria-fila {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 0.75rem;
+  padding: 0.85rem 1rem;
+  border: 1px solid rgba(var(--v-border-color), var(--v-border-opacity));
+  border-radius: 12px;
+  transition: background-color 160ms ease, border-color 160ms ease;
+}
+
+.trayectoria-fila:hover,
+.trayectoria-fila:focus-within {
+  border-color: rgba(var(--trayectoria-acento), 0.3);
+  background: rgba(var(--trayectoria-acento), 0.045);
+}
+
+.trayectoria-datos {
+  display: grid;
+  gap: 0.25rem;
+  min-inline-size: 0;
+  overflow-wrap: anywhere;
+}
+
+.trayectoria-datos > span,
+.trayectoria-periodo,
+.trayectoria-vacio {
+  color: rgba(var(--v-theme-on-surface), 0.7);
+}
+
+.trayectoria-periodo {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+}
+
+.trayectoria-nivel {
+  justify-self: start;
+  margin-block-start: 0.25rem;
+  color: rgb(var(--trayectoria-acento));
+}
+
+.trayectoria-acciones {
+  display: flex;
+  flex: 0 0 auto;
+  gap: 0.15rem;
+}
+
+.trayectoria-vacio {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 1rem;
+  border: 1px dashed rgba(var(--trayectoria-acento), 0.35);
+  border-radius: 12px;
+  background: rgba(var(--trayectoria-acento), 0.04);
+}
+
+.trayectoria-vacio p {
+  margin: 0;
+}
+
+.trayectoria-formulario {
+  padding-block-start: 0.25rem;
+}
+
+.trayectoria-actual {
+  padding-inline: 0.75rem;
+  border-radius: 10px;
+  background: rgba(var(--v-theme-primary), 0.06);
+}
+
+.trayectoria-formulario-acciones {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 0.5rem;
+  padding-block-start: 1rem;
+  margin-block-start: 1.25rem;
+  border-block-start: 1px solid rgba(var(--v-border-color), var(--v-border-opacity));
 }
 </style>
