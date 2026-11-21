@@ -1,218 +1,396 @@
+<script setup lang="ts">
+import type { VForm } from 'vuetify/components/VForm'
+import type { CandidatoExternoInterface } from '@/types/reclutamiento'
+
+definePageMeta({
+  layout: 'portal',
+  public: true,
+  sanctum: { excluded: true },
+})
+
+useSeoMeta({ title: 'Crear cuenta de candidato' })
+
+const { registrarCandidato } = usePortalReclutamiento()
+const { showToastSuccess, showToastError } = useToast()
+const route = useRoute()
+
+const refForm = ref<VForm>()
+const cargando = ref(false)
+const verPassword = ref(false)
+
+const data = ref<CandidatoExternoInterface>({
+  nombres: '',
+  apellidos: '',
+  dpi: '',
+  email: '',
+  telefono: '',
+  fecha_nacimiento: null,
+  password: '',
+  password_confirmation: '',
+  acepta_terminos: false,
+})
+
+const hoyMenos18 = new Date()
+
+hoyMenos18.setFullYear(hoyMenos18.getFullYear() - 18)
+
+const dpiValido = (v: string) => /^\d{13}$/.test(v ?? '') || 'El DPI debe tener 13 dígitos'
+const telefonoValido = (v: string) => /^\+?\d{8,11}$/.test((v ?? '').replace(/[\s-]/g, '')) || 'El teléfono debe tener entre 8 y 11 dígitos'
+const mayorDeEdad = (v: string | null) => !v || new Date(v) <= hoyMenos18 || 'Debes ser mayor de 18 años'
+const passwordSegura = (v: string) => /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d).{8,72}$/.test(v ?? '') || 'Mínimo 8 caracteres, con mayúscula, minúscula y número'
+const coincidePassword = (v: string) => v === data.value.password || 'Las contraseñas no coinciden'
+const aceptaTerminos = (v: boolean) => v || 'Debes aceptar los términos'
+
+const onSubmit = async () => {
+  const { valid } = await refForm.value!.validate()
+
+  if (!valid || cargando.value)
+    return
+
+  cargando.value = true
+
+  try {
+    const respuesta = await registrarCandidato(data.value)
+
+    showToastSuccess(respuesta.message ?? 'Registro exitoso.')
+
+    const vacante = route.query.vacante
+
+    await navigateTo({ path: '/login', query: vacante ? { vacante: String(vacante) } : {} })
+  }
+  catch (error: any) {
+    const errores = error.response?.data?.errors
+    const primero = errores ? (Object.values(errores)[0] as string[] | undefined)?.[0] : null
+
+    showToastError(primero ?? error.response?.data?.message ?? 'No se pudo completar el registro')
+  }
+  finally {
+    cargando.value = false
+  }
+}
+</script>
+
 <template>
-  <VContainer class="registro-contenedor py-10">
-    <VBtn
-      to="/reclutamiento"
-      variant="text"
-      prepend-icon="tabler-chevron-left"
-      class="mb-5"
-    >
-      Volver al portal
-    </VBtn>
+  <div class="registro-pagina">
+    <VContainer class="registro-contenedor">
+      <VBtn
+        to="/reclutamiento"
+        variant="text"
+        prepend-icon="tabler-arrow-left"
+        class="registro-volver"
+      >
+        Volver al portal
+      </VBtn>
 
-    <VCard class="registro-card" variant="outlined">
-      <header class="registro-cabecera">
-        <p class="mb-2">Cooperativa Guayacán</p>
-        <h1>Registro de candidatos</h1>
-        <p class="mt-3 mb-0">
-          Crea tu cuenta para postularte a nuestras vacantes y consultar
-          el avance de tus postulaciones.
-        </p>
-      </header>
+      <VCard class="registro-card" elevation="0">
+        <header class="registro-cabecera">
+          <span class="registro-etiqueta">Cooperativa Guayacán</span>
+          <h1>Registro de candidatos</h1>
+          <p>
+            Crea tu cuenta para postularte a nuestras vacantes y consultar
+            el avance de tus postulaciones.
+          </p>
+        </header>
 
-      <VCardText class="registro-cuerpo">
-        <VForm ref="refForm" @submit.prevent="onSubmit">
-          <section aria-labelledby="registro-datos">
-            <h2 id="registro-datos" class="registro-seccion">
-              Datos personales
-            </h2>
+        <VCardText class="registro-cuerpo">
+          <VForm ref="refForm" @submit.prevent="onSubmit">
+            <section aria-labelledby="registro-datos">
+              <h2 id="registro-datos" class="registro-seccion">
+                Datos personales
+              </h2>
 
-            <VRow>
-              <VCol cols="12" md="6">
-                <AppTextField
-                  v-model="data.nombres"
-                  :rules="[requiredValidator]"
-                  label="Nombres"
-                  autocomplete="given-name"
-                />
-              </VCol>
+              <VRow>
+                <VCol cols="12" md="6">
+                  <AppTextField
+                    v-model="data.nombres"
+                    :rules="[requiredValidator]"
+                    label="Nombres"
+                    placeholder="Ingresa tus nombres"
+                    autocomplete="given-name"
+                  />
+                </VCol>
 
-              <VCol cols="12" md="6">
-                <AppTextField
-                  v-model="data.apellidos"
-                  :rules="[requiredValidator]"
-                  label="Apellidos"
-                  autocomplete="family-name"
-                />
-              </VCol>
+                <VCol cols="12" md="6">
+                  <AppTextField
+                    v-model="data.apellidos"
+                    :rules="[requiredValidator]"
+                    label="Apellidos"
+                    placeholder="Ingresa tus apellidos"
+                    autocomplete="family-name"
+                  />
+                </VCol>
 
-              <VCol cols="12" md="6">
-                <AppTextField
-                  v-model="data.dpi"
-                  :rules="[requiredValidator, dpiValido]"
-                  label="DPI"
-                  placeholder="13 dígitos"
-                  inputmode="numeric"
-                  maxlength="13"
-                />
-              </VCol>
+                <VCol cols="12" md="6">
+                  <AppTextField
+                    v-model="data.dpi"
+                    :rules="[requiredValidator, dpiValido]"
+                    label="DPI"
+                    placeholder="13 dígitos sin espacios"
+                    inputmode="numeric"
+                    maxlength="13"
+                  />
+                </VCol>
 
-              <VCol cols="12" md="6">
-                <AppTextField
-                  v-model="data.fecha_nacimiento"
-                  :rules="[requiredValidator]"
-                  label="Fecha de nacimiento"
-                  type="date"
-                  autocomplete="bday"
-                />
-              </VCol>
+                <VCol cols="12" md="6">
+                  <AppTextField
+                    v-model="data.fecha_nacimiento"
+                    :rules="[requiredValidator, mayorDeEdad]"
+                    label="Fecha de nacimiento"
+                    type="date"
+                    autocomplete="bday"
+                  />
+                </VCol>
 
-              <VCol cols="12" md="6">
-                <AppTextField
-                  v-model="data.email"
-                  :rules="[requiredValidator, emailValidator]"
-                  label="Correo electrónico"
-                  type="email"
-                  autocomplete="email"
-                  placeholder="correo@ejemplo.com"
-                />
-              </VCol>
+                <VCol cols="12" md="6">
+                  <AppTextField
+                    v-model="data.email"
+                    :rules="[requiredValidator, emailValidator]"
+                    label="Correo electrónico"
+                    type="email"
+                    autocomplete="email"
+                    placeholder="correo@ejemplo.com"
+                  />
+                </VCol>
 
-              <VCol cols="12" md="6">
-                <AppTextField
-                  v-model="data.telefono"
-                  :rules="[requiredValidator]"
-                  label="Teléfono"
-                  type="tel"
-                  autocomplete="tel"
-                />
-              </VCol>
-            </VRow>
-          </section>
+                <VCol cols="12" md="6">
+                  <AppTextField
+                    v-model="data.telefono"
+                    :rules="[requiredValidator, telefonoValido]"
+                    label="Teléfono"
+                    type="tel"
+                    placeholder="Ej. 5512 3456"
+                    autocomplete="tel"
+                  />
+                </VCol>
+              </VRow>
+            </section>
 
-          <VDivider class="my-6" />
+            <VDivider class="registro-divisor" />
 
-          <section aria-labelledby="registro-acceso">
-            <h2 id="registro-acceso" class="registro-seccion">
-              Datos de acceso
-            </h2>
+            <section aria-labelledby="registro-acceso">
+              <h2 id="registro-acceso" class="registro-seccion">
+                Datos de acceso
+              </h2>
 
-            <VRow>
-              <VCol cols="12" md="6">
-                <AppTextField
-                  v-model="data.password"
-                  :rules="[requiredValidator, passwordValidator]"
-                  label="Contraseña"
-                  :type="verPassword ? 'text' : 'password'"
-                  autocomplete="new-password"
+              <VRow>
+                <VCol cols="12" md="6">
+                  <AppTextField
+                    v-model="data.password"
+                    :rules="[requiredValidator, passwordSegura]"
+                    label="Contraseña"
+                    placeholder="Mínimo 8 caracteres"
+                    :type="verPassword ? 'text' : 'password'"
+                    autocomplete="new-password"
+                  >
+                    <template #append-inner>
+                      <VBtn
+                        type="button"
+                        variant="text"
+                        size="small"
+                        density="comfortable"
+                        :icon="verPassword ? 'tabler-eye-off' : 'tabler-eye'"
+                        :aria-label="verPassword ? 'Ocultar contraseñas' : 'Mostrar contraseñas'"
+                        @click="verPassword = !verPassword"
+                      />
+                    </template>
+                  </AppTextField>
+                </VCol>
+
+                <VCol cols="12" md="6">
+                  <AppTextField
+                    v-model="data.password_confirmation"
+                    :rules="[requiredValidator, coincidePassword]"
+                    label="Confirmar contraseña"
+                    placeholder="Repite tu contraseña"
+                    :type="verPassword ? 'text' : 'password'"
+                    autocomplete="new-password"
+                  />
+                </VCol>
+              </VRow>
+            </section>
+
+            <div class="registro-terminos">
+              <VCheckbox
+                v-model="data.acepta_terminos"
+                :rules="[aceptaTerminos]"
+                color="#123e66"
+                density="comfortable"
+                label="Acepto el tratamiento de mis datos personales para el proceso de reclutamiento"
+              />
+            </div>
+
+            <div class="registro-acciones">
+              <VBtn
+                type="submit"
+                color="#123e66"
+                size="large"
+                class="registro-btn-submit"
+                :loading="cargando"
+                :disabled="cargando"
+              >
+                Crear cuenta
+              </VBtn>
+
+              <p class="registro-login-texto">
+                ¿Ya tienes una cuenta?
+                <NuxtLink
+                  :to="{ path: '/login', query: route.query.vacante ? { vacante: String(route.query.vacante) } : {} }"
+                  class="registro-login-enlace"
                 >
-                  <template #append-inner>
-                    <VBtn
-                      type="button"
-                      variant="text"
-                      size="small"
-                      :icon="verPassword ? 'tabler-eye-off' : 'tabler-eye'"
-                      :aria-label="verPassword ? 'Ocultar contraseñas' : 'Mostrar contraseñas'"
-                      @click="verPassword = !verPassword"
-                    />
-                  </template>
-                </AppTextField>
-              </VCol>
-
-              <VCol cols="12" md="6">
-                <AppTextField
-                  v-model="data.password_confirmation"
-                  :rules="[requiredValidator, coincidePassword]"
-                  label="Confirmar contraseña"
-                  :type="verPassword ? 'text' : 'password'"
-                  autocomplete="new-password"
-                />
-              </VCol>
-            </VRow>
-          </section>
-
-          <VCheckbox
-            v-model="data.acepta_terminos"
-            :rules="[aceptaTerminos]"
-            color="primary"
-            class="mt-4"
-            label="Acepto el tratamiento de mis datos personales para el proceso de reclutamiento"
-          />
-
-          <div class="registro-acciones">
-            <VBtn
-              type="submit"
-              color="primary"
-              size="large"
-              :loading="cargando"
-              :disabled="cargando"
-            >
-              Crear cuenta
-            </VBtn>
-
-            <NuxtLink to="/login" class="text-primary">
-              Ya tengo cuenta
-            </NuxtLink>
-          </div>
-        </VForm>
-      </VCardText>
-    </VCard>
-  </VContainer>
+                  Inicia sesión
+                </NuxtLink>
+              </p>
+            </div>
+          </VForm>
+        </VCardText>
+      </VCard>
+    </VContainer>
+  </div>
 </template>
 
 <style scoped>
+.registro-pagina {
+  --portal-azul: #123e66;
+  --portal-azul-oscuro: #0d2e4d;
+  --portal-verde: #80b94e;
+  --portal-borde: rgba(18, 62, 102, 0.12);
+
+  min-block-size: 80vh;
+  padding-block: 2rem 4rem;
+  background: #f5f7fa;
+}
+
 .registro-contenedor {
-  max-inline-size: 58rem;
+  max-inline-size: 54rem;
+}
+
+.registro-volver {
+  margin-block-end: 1.25rem;
+  color: var(--portal-azul) !important;
+  font-weight: 600;
+  padding-inline: 0.5rem;
 }
 
 .registro-card {
   overflow: hidden;
-  border-color: rgba(var(--v-border-color), var(--v-border-opacity));
-  border-radius: 1.125rem;
+  border: 1px solid var(--portal-borde);
+  border-radius: 1rem;
+  background: #ffffff;
+  box-shadow: 0 8px 28px -6px rgba(13, 46, 77, 0.08);
 }
 
 .registro-cabecera {
-  border-block-start: 4px solid #ffb300;
-  padding: clamp(1.4rem, 4vw, 2.5rem);
-  background: linear-gradient(125deg, #102e4d, #1f5680);
-  color: white;
+  padding: clamp(1.75rem, 4vw, 2.5rem);
+  border-block-end: 3px solid var(--portal-verde);
+  background: linear-gradient(135deg, var(--portal-azul-oscuro), var(--portal-azul));
+  color: #ffffff;
+}
+
+.registro-etiqueta {
+  display: inline-block;
+  margin-block-end: 0.65rem;
+  padding: 0.25rem 0.75rem;
+  border-radius: 999px;
+  background: rgba(128, 185, 78, 0.18);
+  color: #a9e374;
+  font-size: 0.8125rem;
+  font-weight: 600;
+  letter-spacing: 0.02em;
 }
 
 .registro-cabecera h1 {
   margin: 0;
-  font-size: clamp(1.9rem, 5vw, 3rem);
-  line-height: 1.1;
+  color: #ffffff;
+  font-size: clamp(1.65rem, 3.5vw, 2.25rem);
+  font-weight: 800;
+  line-height: 1.15;
+  letter-spacing: -0.02em;
 }
 
 .registro-cabecera p {
-  max-inline-size: 54ch;
+  max-inline-size: 52ch;
+  margin: 0.65rem 0 0;
+  color: #dbe7f3;
+  font-size: 0.975rem;
   line-height: 1.55;
 }
 
 .registro-cuerpo {
-  padding: clamp(1.25rem, 4vw, 2.5rem);
+  padding: clamp(1.5rem, 4vw, 2.5rem);
 }
 
 .registro-seccion {
-  margin-block: 0 1rem;
-  font-size: 1.125rem;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-block: 0 1.25rem;
+  color: var(--portal-azul);
+  font-size: 1.0625rem;
   font-weight: 700;
+}
+
+.registro-seccion::before {
+  content: '';
+  display: inline-block;
+  inline-size: 3.5px;
+  block-size: 1.05rem;
+  border-radius: 99px;
+  background: var(--portal-verde);
+}
+
+.registro-divisor {
+  margin-block: 1.75rem;
+  opacity: 0.65;
+}
+
+.registro-terminos {
+  margin-block-start: 1.25rem;
+  padding: 0.75rem 1rem;
+  border: 1px solid var(--portal-borde);
+  border-radius: 0.75rem;
+  background: #f8fafc;
 }
 
 .registro-acciones {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
+  justify-content: space-between;
   gap: 1rem;
-  margin-block-start: 1rem;
+  margin-block-start: 1.75rem;
+  padding-block-start: 1.5rem;
+  border-block-start: 1px solid var(--portal-borde);
 }
 
-@media (max-width: 480px) {
-  .registro-acciones {
-    align-items: stretch;
-    flex-direction: column;
-  }
+.registro-btn-submit {
+  color: #ffffff !important;
+  font-weight: 600;
+  padding-inline: 2rem;
+  border-radius: 0.65rem;
+}
 
-  .registro-acciones a {
+.registro-login-texto {
+  margin: 0;
+  color: #526375;
+  font-size: 0.9375rem;
+}
+
+.registro-login-enlace {
+  color: var(--portal-azul);
+  font-weight: 700;
+  text-decoration: none;
+  margin-inline-start: 0.25rem;
+}
+
+.registro-login-enlace:hover {
+  text-decoration: underline;
+  text-underline-offset: 0.2em;
+}
+
+@media (max-width: 540px) {
+  .registro-acciones {
+    flex-direction: column;
+    align-items: stretch;
     text-align: center;
   }
 }
