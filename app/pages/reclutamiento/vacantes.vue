@@ -13,7 +13,50 @@ useSeoMeta({
 })
 
 const { obtenerVacantes } = usePortalReclutamiento()
-const { showToastError } = useToast()
+const { showToastError, showToastSuccess } = useToast()
+const { estaAutenticado, idsPostulados, postular, cargarPostulaciones, token } = useCandidatoSesion()
+const route = useRoute()
+const postulando = ref(false)
+
+const yaPostulado = (id: number) => idsPostulados.value.has(id)
+
+async function postularme(vacanteId: number) {
+  if (!estaAutenticado.value) {
+    await navigateTo({ path: '/reclutamiento/login', query: { vacante: String(vacanteId) } })
+
+    return
+  }
+
+  if (postulando.value || yaPostulado(vacanteId))
+    return
+
+  postulando.value = true
+
+  try {
+    const respuesta = await postular(vacanteId)
+
+    showToastSuccess(respuesta.message)
+    modalDetalle.value = false
+  }
+  catch (error: any) {
+    const estado = error?.statusCode ?? error?.response?.status
+
+    if (estado === 401 || estado === 403) {
+      token.value = null
+      await navigateTo({ path: '/reclutamiento/login', query: { vacante: String(vacanteId) } })
+
+      return
+    }
+
+    if (estado === 409)
+      await cargarPostulaciones().catch(() => {})
+
+    showToastError(error?.data?.message ?? 'No se pudo completar la postulación')
+  }
+  finally {
+    postulando.value = false
+  }
+}
 
 const vacantes = ref<VacantePublicaInterface[]>([])
 const cargando = ref(true)
@@ -145,7 +188,20 @@ watch(buscar, () => {
 })
 
 watch(pagina, cargar)
-onMounted(cargar)
+
+onMounted(async () => {
+  if (estaAutenticado.value)
+    await cargarPostulaciones().catch(() => {})
+
+  await cargar()
+
+  // Tras iniciar sesión desde una vacante concreta, se abre su detalle
+  const deseada = Number(route.query.vacante)
+  const encontrada = tarjetas.value.find(v => v.id === deseada)
+
+  if (encontrada)
+    abrirDetalle(encontrada)
+})
 
 onBeforeUnmount(() => {
   clearTimeout(temporizador)
@@ -235,6 +291,16 @@ onBeforeUnmount(() => {
                 <span v-if="vacante.modalidad_trabajo" class="vacante-modalidad">
                   {{ modalidadVisible(vacante.modalidad_trabajo) }}
                 </span>
+
+                <VChip
+                  v-if="yaPostulado(vacante.id)"
+                  color="success"
+                  size="small"
+                  variant="flat"
+                  prepend-icon="tabler-circle-check"
+                >
+                  Postulado
+                </VChip>
               </div>
 
               <h2>{{ vacante.nombre }}</h2>
@@ -420,16 +486,26 @@ onBeforeUnmount(() => {
           </VBtn>
 
           <VBtn
+            v-if="vacanteSeleccionada && yaPostulado(vacanteSeleccionada.id)"
+            color="success"
+            variant="tonal"
+            prepend-icon="tabler-circle-check"
+            to="/reclutamiento/mis-postulaciones"
+          >
+            Ya te postulaste · Ver mis postulaciones
+          </VBtn>
+
+          <VBtn
+            v-else
             color="#123e66"
             variant="flat"
             prepend-icon="tabler-send"
             class="detalle-btn-postular"
-            :to="{
-              path: '/reclutamiento/registro',
-              query: { vacante: String(vacanteSeleccionada.id) },
-            }"
+            :loading="postulando"
+            :disabled="postulando"
+            @click="postularme(vacanteSeleccionada.id)"
           >
-            Postularme
+            {{ estaAutenticado ? 'Postularme' : 'Iniciar sesión para postularme' }}
           </VBtn>
         </div>
       </div>
@@ -443,13 +519,12 @@ onBeforeUnmount(() => {
   --portal-azul-oscuro: #0c2944;
   --portal-azul-claro: #1d578c;
   --portal-verde: #80b94e;
-  --portal-verde-oscuro: #4d8b31;
-  --portal-borde: rgba(18, 62, 102, 0.12);
-  --portal-sombra-suave: 0 4px 20px -2px rgba(12, 41, 68, 0.06);
-  --portal-sombra-hover: 0 16px 32px -4px rgba(12, 41, 68, 0.12);
+  --portal-borde: rgba(var(--v-border-color), var(--v-border-opacity));
+  --portal-sombra-suave: 0 4px 20px -2px rgba(0, 0, 0, 0.08);
+  --portal-sombra-hover: 0 16px 32px -4px rgba(0, 0, 0, 0.16);
 
   min-block-size: 80vh;
-  background: linear-gradient(180deg, #f4f7fa 0%, rgb(var(--v-theme-background)) 260px);
+  background: rgb(var(--v-theme-background));
 }
 
 .vacantes-contenedor {
@@ -476,7 +551,7 @@ onBeforeUnmount(() => {
 .vacantes-intro {
   position: relative;
   z-index: 1;
-  padding-block: clamp(3rem, 6vw, 4.75rem) 4.25rem;
+  padding-block: clamp(5.5rem, 8vw, 6.75rem) 4.25rem;
 }
 
 .vacantes-enlace {
@@ -532,11 +607,10 @@ onBeforeUnmount(() => {
   border: 1px solid var(--portal-borde);
   border-radius: 1rem;
   background: rgb(var(--v-theme-surface));
-  box-shadow: 0 12px 32px -4px rgba(12, 41, 68, 0.12);
+  box-shadow: 0 12px 32px -4px rgba(0, 0, 0, 0.14);
 }
 
 .vacantes-buscador-btn {
-  color: #fff !important;
   font-weight: 600;
   letter-spacing: 0.01em;
   border-radius: 0.65rem;
@@ -550,7 +624,7 @@ onBeforeUnmount(() => {
   justify-content: center;
   gap: 1rem;
   padding-block: 4.5rem;
-  color: var(--portal-azul);
+  color: rgba(var(--v-theme-on-surface), var(--v-high-emphasis-opacity));
   font-weight: 500;
 }
 
@@ -573,8 +647,8 @@ onBeforeUnmount(() => {
   margin-block: 0 1.25rem;
   padding: 0.4rem 0.9rem;
   border-radius: 999px;
-  background: rgba(18, 62, 102, 0.07);
-  color: var(--portal-azul);
+  background: rgba(var(--v-theme-primary), 0.12);
+  color: rgb(var(--v-theme-primary));
   font-size: 0.9rem;
 }
 
@@ -599,7 +673,7 @@ onBeforeUnmount(() => {
 @media (hover: hover) and (prefers-reduced-motion: no-preference) {
   .vacante-card:hover {
     transform: translateY(-4px);
-    border-color: rgba(18, 62, 102, 0.24);
+    border-color: rgba(var(--v-theme-primary), 0.35);
     box-shadow: var(--portal-sombra-hover);
   }
 }
@@ -628,16 +702,16 @@ onBeforeUnmount(() => {
   block-size: 2.85rem;
   place-items: center;
   border-radius: 0.75rem;
-  background: linear-gradient(135deg, #e7f0f8 0%, #d8e7f4 100%);
-  color: var(--portal-azul);
+  background: rgba(var(--v-theme-primary), 0.12);
+  color: rgb(var(--v-theme-primary));
 }
 
 .vacante-modalidad {
   padding: 0.3rem 0.85rem;
-  border: 1px solid rgba(77, 139, 49, 0.22);
+  border: 1px solid rgba(var(--v-theme-success), 0.28);
   border-radius: 999px;
-  background: #edf6e6;
-  color: #2c581b;
+  background: rgba(var(--v-theme-success), 0.12);
+  color: rgb(var(--v-theme-success));
   font-size: 0.8125rem;
   font-weight: 700;
   letter-spacing: 0.015em;
@@ -646,7 +720,7 @@ onBeforeUnmount(() => {
 
 .vacante-card h2 {
   margin-block: 1.1rem 0.6rem;
-  color: var(--portal-azul-oscuro);
+  color: rgb(var(--v-theme-on-surface));
   font-size: clamp(1.2rem, 2.2vw, 1.45rem);
   font-weight: 750;
   line-height: 1.28;
@@ -656,15 +730,15 @@ onBeforeUnmount(() => {
 
 .vacante-meta {
   gap: 0.45rem 0.85rem;
-  color: #4a5d70;
+  color: rgba(var(--v-theme-on-surface), var(--v-medium-emphasis-opacity));
   font-size: 0.875rem;
   font-weight: 500;
 }
 
 .vacante-puesto {
   padding-inline-end: 0.85rem;
-  border-inline-end: 1px solid rgba(18, 62, 102, 0.18);
-  color: var(--portal-azul);
+  border-inline-end: 1px solid var(--portal-borde);
+  color: rgb(var(--v-theme-primary));
   font-weight: 600;
 }
 
@@ -673,7 +747,7 @@ onBeforeUnmount(() => {
 }
 
 .vacante-dato .v-icon {
-  color: var(--portal-verde-oscuro);
+  color: rgb(var(--v-theme-success));
 }
 
 .vacante-descripcion {
@@ -682,7 +756,7 @@ onBeforeUnmount(() => {
   -webkit-box-orient: vertical;
   overflow: hidden;
   margin-block: 1rem 0;
-  color: #526375;
+  color: rgba(var(--v-theme-on-surface), var(--v-medium-emphasis-opacity));
   font-size: 0.9375rem;
   line-height: 1.62;
   overflow-wrap: anywhere;
@@ -697,7 +771,7 @@ onBeforeUnmount(() => {
   gap: 0.85rem;
   padding: 1rem 1.5rem;
   border-block-start: 1px solid var(--portal-borde);
-  background: #f8fafc;
+  background: rgba(var(--v-theme-on-surface), 0.04);
 }
 
 .vacante-salario span,
@@ -706,7 +780,7 @@ onBeforeUnmount(() => {
 }
 
 .vacante-salario span {
-  color: #64748b;
+  color: rgba(var(--v-theme-on-surface), var(--v-medium-emphasis-opacity));
   font-size: 0.78rem;
   font-weight: 600;
   text-transform: uppercase;
@@ -715,14 +789,13 @@ onBeforeUnmount(() => {
 
 .vacante-salario strong {
   margin-block-start: 0.1rem;
-  color: var(--portal-azul-oscuro);
+  color: rgb(var(--v-theme-on-surface));
   font-size: 1.05rem;
   font-weight: 750;
 }
 
 .vacante-aplicar {
   margin-inline-start: auto;
-  color: #fff !important;
   font-weight: 600;
   border-radius: 0.65rem;
 }
@@ -744,20 +817,20 @@ onBeforeUnmount(() => {
 }
 
 :global(.detalle-vacante.v-card) {
-  border: 1px solid rgba(18, 62, 102, 0.15);
+  border: 1px solid rgba(var(--v-border-color), var(--v-border-opacity));
   border-block-start: 5px solid #80b94e;
   border-radius: 1.25rem;
-  box-shadow: 0 24px 48px -12px rgba(12, 41, 68, 0.22);
+  box-shadow: 0 24px 48px -12px rgba(0, 0, 0, 0.28);
 }
 
 :global(.detalle-vacante > .v-card-item) {
   padding: 1.5rem 1.75rem 1rem;
-  border-block-end: 1px solid rgba(18, 62, 102, 0.08);
-  background: #f8fafc;
+  border-block-end: 1px solid rgba(var(--v-border-color), var(--v-border-opacity));
+  background: rgba(var(--v-theme-on-surface), 0.03);
 }
 
 :global(.detalle-vacante > .v-card-item .v-card-title) {
-  color: #0c2944;
+  color: rgb(var(--v-theme-on-surface));
   font-size: 1.45rem;
   font-weight: 800;
   line-height: 1.28;
@@ -768,10 +841,9 @@ onBeforeUnmount(() => {
 
 :global(.detalle-vacante > .v-card-item .v-card-subtitle) {
   margin-block-start: 0.3rem;
-  color: #123e66;
+  color: rgba(var(--v-theme-on-surface), var(--v-medium-emphasis-opacity));
   font-size: 0.95rem;
   font-weight: 600;
-  opacity: 0.85;
   white-space: normal;
   overflow-wrap: anywhere;
 }
@@ -781,7 +853,7 @@ onBeforeUnmount(() => {
 }
 
 .detalle-cuerpo {
-  --detalle-borde: rgba(18, 62, 102, 0.12);
+  --detalle-borde: rgba(var(--v-border-color), var(--v-border-opacity));
   padding: clamp(1.25rem, 4vw, 1.75rem);
 }
 
@@ -800,12 +872,12 @@ onBeforeUnmount(() => {
   padding: 0.95rem 1rem;
   border: 1px solid var(--detalle-borde);
   border-radius: 0.85rem;
-  background: #f6f9fc;
+  background: rgba(var(--v-theme-on-surface), 0.04);
 }
 
 .detalle-dato--salario {
-  border-color: rgba(77, 139, 49, 0.25);
-  background: #f2f8ed;
+  border-color: rgba(var(--v-theme-success), 0.28);
+  background: rgba(var(--v-theme-success), 0.1);
 }
 
 .detalle-icono {
@@ -814,18 +886,18 @@ onBeforeUnmount(() => {
   place-items: center;
   block-size: 2.5rem;
   border-radius: 0.65rem;
-  background: #e1ecf7;
-  color: #123e66;
+  background: rgba(var(--v-theme-primary), 0.12);
+  color: rgb(var(--v-theme-primary));
 }
 
 .detalle-dato--salario .detalle-icono {
-  background: #dff0d3;
-  color: #3a6e22;
+  background: rgba(var(--v-theme-success), 0.16);
+  color: rgb(var(--v-theme-success));
 }
 
 .detalle-dato dt {
   margin-block-end: 0.15rem;
-  color: #5b6d80;
+  color: rgba(var(--v-theme-on-surface), var(--v-medium-emphasis-opacity));
   font-size: 0.8rem;
   font-weight: 600;
   text-transform: uppercase;
@@ -834,7 +906,7 @@ onBeforeUnmount(() => {
 
 .detalle-dato dd {
   margin: 0;
-  color: #0c2944;
+  color: rgb(var(--v-theme-on-surface));
   font-size: 0.975rem;
   font-weight: 700;
   overflow-wrap: anywhere;
@@ -849,7 +921,7 @@ onBeforeUnmount(() => {
   align-items: center;
   gap: 0.5rem;
   margin: 0 0 0.85rem;
-  color: #123e66;
+  color: rgb(var(--v-theme-on-surface));
   font-size: 1.1rem;
   font-weight: 750;
   letter-spacing: -0.01em;
@@ -866,7 +938,7 @@ onBeforeUnmount(() => {
 
 .detalle-descripcion {
   margin: 0;
-  color: #334155;
+  color: rgba(var(--v-theme-on-surface), var(--v-high-emphasis-opacity));
   font-size: 0.965rem;
   line-height: 1.7;
   white-space: pre-line;
@@ -879,7 +951,7 @@ onBeforeUnmount(() => {
   overflow: hidden;
   border: 1px solid var(--detalle-borde);
   border-radius: 0.85rem;
-  background: #fff;
+  background: rgb(var(--v-theme-surface));
   list-style: none;
 }
 
@@ -895,7 +967,7 @@ onBeforeUnmount(() => {
 }
 
 .detalle-fila:hover {
-  background: #f8fafc;
+  background: rgba(var(--v-theme-on-surface), 0.04);
 }
 
 .detalle-fila + .detalle-fila {
@@ -903,13 +975,13 @@ onBeforeUnmount(() => {
 }
 
 .detalle-fila dt {
-  color: #475569;
+  color: rgba(var(--v-theme-on-surface), var(--v-medium-emphasis-opacity));
   font-weight: 500;
 }
 
 .detalle-fila dd {
   margin: 0;
-  color: #0c2944;
+  color: rgb(var(--v-theme-on-surface));
   font-weight: 700;
   overflow-wrap: anywhere;
 }
@@ -920,7 +992,7 @@ onBeforeUnmount(() => {
   align-items: flex-start;
   gap: 0.6rem;
   min-inline-size: 0;
-  color: #1e293b;
+  color: rgba(var(--v-theme-on-surface), var(--v-high-emphasis-opacity));
   font-size: 0.95rem;
   line-height: 1.45;
 }
@@ -928,7 +1000,7 @@ onBeforeUnmount(() => {
 .detalle-check {
   flex-shrink: 0;
   margin-block-start: 0.12rem;
-  color: #4d8b31;
+  color: rgb(var(--v-theme-success));
 }
 
 .detalle-chip {
@@ -947,7 +1019,6 @@ onBeforeUnmount(() => {
 }
 
 .detalle-btn-postular {
-  color: #fff !important;
   font-weight: 600;
   padding-inline: 1.5rem;
   border-radius: 0.65rem;

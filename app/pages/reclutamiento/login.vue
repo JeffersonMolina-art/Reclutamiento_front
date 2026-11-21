@@ -155,11 +155,12 @@ const onSubmit = async () => {
 .login-pagina {
   --portal-azul: #123e66;
   --portal-azul-oscuro: #0d2e4d;
-  --portal-borde: rgba(18, 62, 102, 0.12);
+  --portal-verde: #80b94e;
+  --portal-borde: rgba(var(--v-border-color), var(--v-border-opacity));
 
   min-block-size: 80vh;
-  padding-block: 3rem 4rem;
-  background: #f5f7fa;
+  padding-block: clamp(5rem, 7vw, 6.25rem) 4rem;
+  background: rgb(var(--v-theme-background));
 }
 
 .login-contenedor {
@@ -170,13 +171,13 @@ const onSubmit = async () => {
   overflow: hidden;
   border: 1px solid var(--portal-borde);
   border-radius: 1rem;
-  background: #ffffff;
-  box-shadow: 0 8px 28px -6px rgba(13, 46, 77, 0.08);
+  background: rgb(var(--v-theme-surface));
+  box-shadow: 0 8px 28px -6px rgba(0, 0, 0, 0.12);
 }
 
 .login-cabecera {
   padding: 1.75rem 2rem;
-  border-block-end: 3px solid #ffb300;
+  border-block-end: 3px solid var(--portal-verde);
   background: linear-gradient(135deg, var(--portal-azul-oscuro), var(--portal-azul));
   color: #ffffff;
 }
@@ -186,10 +187,11 @@ const onSubmit = async () => {
   margin-block-end: 0.6rem;
   padding: 0.25rem 0.75rem;
   border-radius: 999px;
-  background: rgba(255, 179, 0, 0.2);
-  color: #ffd25e;
+  background: rgba(128, 185, 78, 0.18);
+  color: #a9e374;
   font-size: 0.8125rem;
   font-weight: 600;
+  letter-spacing: 0.02em;
 }
 
 .login-cabecera h1 {
@@ -197,6 +199,7 @@ const onSubmit = async () => {
   color: #ffffff;
   font-size: 1.75rem;
   font-weight: 800;
+  letter-spacing: -0.02em;
 }
 
 .login-cabecera p {
@@ -211,21 +214,20 @@ const onSubmit = async () => {
 }
 
 .login-btn {
-  color: #ffffff !important;
   font-weight: 600;
   border-radius: 0.65rem;
 }
 
 .login-registro {
   margin: 1.5rem 0 0;
-  color: #526375;
+  color: rgba(var(--v-theme-on-surface), var(--v-medium-emphasis-opacity));
   text-align: center;
   font-size: 0.9375rem;
 }
 
 .login-enlace {
   margin-inline-start: 0.25rem;
-  color: var(--portal-azul);
+  color: rgb(var(--v-theme-primary));
   font-weight: 700;
   text-decoration: none;
 }

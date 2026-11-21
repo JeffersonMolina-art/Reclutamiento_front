@@ -252,7 +252,7 @@ async function onSubmit() {
 
             <section aria-labelledby="registro-identificacion">
               <h2 id="registro-identificacion" class="registro-seccion">
-                IdentificaciÃ³n
+                Identificación
               </h2>
 
               <VRow>
@@ -261,7 +261,7 @@ async function onSubmit() {
                     v-model="data.dpi"
                     :rules="[requiredValidator, dpiValido]"
                     label="DPI"
-                    placeholder="13 dÃ­gitos sin espacios"
+                    placeholder="13 dígitos sin espacios"
                     type="text"
                     inputmode="numeric"
                     maxlength="13"
@@ -294,7 +294,7 @@ async function onSubmit() {
                   <AppTextField
                     v-model="data.email"
                     :rules="[requiredValidator, emailValidator]"
-                    label="Correo electrÃ³nico"
+                    label="Correo electrónico"
                     type="email"
                     autocomplete="email"
                     placeholder="correo@ejemplo.com"
@@ -305,7 +305,7 @@ async function onSubmit() {
                   <AppTextField
                     v-model="data.telefono"
                     :rules="[requiredValidator, telefonoValido]"
-                    label="TelÃ©fono"
+                    label="Teléfono"
                     type="tel"
                     inputmode="numeric"
                     maxlength="11"
@@ -329,8 +329,8 @@ async function onSubmit() {
                   <AppTextField
                     v-model="data.password"
                     :rules="[requiredValidator, passwordSegura]"
-                    label="ContraseÃ±a"
-                    placeholder="MÃ­nimo 8 caracteres"
+                    label="Contraseña"
+                    placeholder="Mínimo 8 caracteres"
                     :type="verPassword ? 'text' : 'password'"
                     autocomplete="new-password"
                   >
@@ -341,7 +341,7 @@ async function onSubmit() {
                         size="small"
                         density="comfortable"
                         :icon="verPassword ? 'tabler-eye-off' : 'tabler-eye'"
-                        :aria-label="verPassword ? 'Ocultar contraseÃ±as' : 'Mostrar contraseÃ±as'"
+                        :aria-label="verPassword ? 'Ocultar contraseñas' : 'Mostrar contraseñas'"
                         @click="verPassword = !verPassword"
                       />
                     </template>
@@ -352,8 +352,8 @@ async function onSubmit() {
                   <AppTextField
                     v-model="data.password_confirmation"
                     :rules="[requiredValidator, coincidePassword]"
-                    label="Confirmar contraseÃ±a"
-                    placeholder="Repite tu contraseÃ±a"
+                    label="Confirmar contraseña"
+                    placeholder="Repite tu contraseña"
                     :type="verPassword ? 'text' : 'password'"
                     autocomplete="new-password"
                   />
@@ -384,12 +384,12 @@ async function onSubmit() {
               </VBtn>
 
               <p class="registro-login-texto">
-                Â¿Ya tienes una cuenta?
+                ¿Ya tienes una cuenta?
                 <NuxtLink
                   :to="{ path: '/reclutamiento/login', query: route.query.vacante ? { vacante: String(route.query.vacante) } : {} }"
                   class="registro-login-enlace"
                 >
-                  Inicia sesiÃ³n
+                  Inicia sesión
                 </NuxtLink>
               </p>
             </div>
@@ -405,11 +405,11 @@ async function onSubmit() {
   --portal-azul: #123e66;
   --portal-azul-oscuro: #0d2e4d;
   --portal-verde: #80b94e;
-  --portal-borde: rgba(18, 62, 102, 0.12);
+  --portal-borde: rgba(var(--v-border-color), var(--v-border-opacity));
 
   min-block-size: 80vh;
-  padding-block: 2rem 4rem;
-  background: #f5f7fa;
+  padding-block: clamp(5rem, 7vw, 6.25rem) 4rem;
+  background: rgb(var(--v-theme-background));
 }
 
 .registro-contenedor {
@@ -418,7 +418,6 @@ async function onSubmit() {
 
 .registro-volver {
   margin-block-end: 1.25rem;
-  color: var(--portal-azul) !important;
   font-weight: 600;
   padding-inline: 0.5rem;
 }
@@ -427,8 +426,8 @@ async function onSubmit() {
   overflow: hidden;
   border: 1px solid var(--portal-borde);
   border-radius: 1rem;
-  background: #ffffff;
-  box-shadow: 0 8px 28px -6px rgba(13, 46, 77, 0.08);
+  background: rgb(var(--v-theme-surface));
+  box-shadow: 0 8px 28px -6px rgba(0, 0, 0, 0.12);
 }
 
 .registro-espera {
@@ -436,7 +435,7 @@ async function onSubmit() {
   flex-direction: column;
   align-items: center;
   gap: 0.75rem;
-  color: #123e66;
+  color: rgb(var(--v-theme-on-surface));
   font-weight: 600;
 }
 
@@ -485,7 +484,7 @@ async function onSubmit() {
   align-items: center;
   gap: 0.5rem;
   margin-block: 0 1.25rem;
-  color: var(--portal-azul);
+  color: rgb(var(--v-theme-on-surface));
   font-size: 1.0625rem;
   font-weight: 700;
 }
@@ -509,7 +508,7 @@ async function onSubmit() {
   padding: 0.75rem 1rem;
   border: 1px solid var(--portal-borde);
   border-radius: 0.75rem;
-  background: #f8fafc;
+  background: rgba(var(--v-theme-on-surface), 0.04);
 }
 
 .registro-acciones {
@@ -524,7 +523,6 @@ async function onSubmit() {
 }
 
 .registro-btn-submit {
-  color: #ffffff !important;
   font-weight: 600;
   padding-inline: 2rem;
   border-radius: 0.65rem;
@@ -532,12 +530,12 @@ async function onSubmit() {
 
 .registro-login-texto {
   margin: 0;
-  color: #526375;
+  color: rgba(var(--v-theme-on-surface), var(--v-medium-emphasis-opacity));
   font-size: 0.9375rem;
 }
 
 .registro-login-enlace {
-  color: var(--portal-azul);
+  color: rgb(var(--v-theme-primary));
   font-weight: 700;
   text-decoration: none;
   margin-inline-start: 0.25rem;
