@@ -19,8 +19,11 @@ const cargando = ref(false)
 const verPassword = ref(false)
 
 const data = ref<CandidatoExternoInterface>({
-  nombres: '',
-  apellidos: '',
+  primer_nombre: '',
+  segundo_nombre: '',
+  tercer_nombre: '',
+  primer_apellido: '',
+  segundo_apellido: '',
   dpi: '',
   email: '',
   telefono: '',
@@ -30,39 +33,118 @@ const data = ref<CandidatoExternoInterface>({
   acepta_terminos: false,
 })
 
-const hoyMenos18 = new Date()
+function soloDigitos(event: Event) {
+  const campo = event.target
 
-hoyMenos18.setFullYear(hoyMenos18.getFullYear() - 18)
+  if (!(campo instanceof HTMLInputElement))
+    return
 
-const dpiValido = (v: string) => /^\d{13}$/.test(v ?? '') || 'El DPI debe tener 13 dígitos'
-const telefonoValido = (v: string) => /^\+?\d{8,11}$/.test((v ?? '').replace(/[\s-]/g, '')) || 'El teléfono debe tener entre 8 y 11 dígitos'
-const mayorDeEdad = (v: string | null) => !v || new Date(v) <= hoyMenos18 || 'Debes ser mayor de 18 años'
-const passwordSegura = (v: string) => /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d).{8,72}$/.test(v ?? '') || 'Mínimo 8 caracteres, con mayúscula, minúscula y número'
-const coincidePassword = (v: string) => v === data.value.password || 'Las contraseñas no coinciden'
-const aceptaTerminos = (v: boolean) => v || 'Debes aceptar los términos'
+  const limpio = campo.value.replace(/[^0-9]/g, '')
 
-const onSubmit = async () => {
-  const { valid } = await refForm.value!.validate()
+  if (campo.value !== limpio)
+    campo.value = limpio
+}
 
-  if (!valid || cargando.value)
+watch(() => data.value.dpi, valor => {
+  const limpio = (valor ?? '').replace(/[^0-9]/g, '').slice(0, 13)
+
+  if (limpio !== valor)
+    data.value.dpi = limpio
+})
+
+watch(() => data.value.telefono, valor => {
+  const limpio = (valor ?? '').replace(/[^0-9]/g, '').slice(0, 11)
+
+  if (limpio !== valor)
+    data.value.telefono = limpio
+})
+
+function fechaLocalISO(fecha: Date) {
+  const anio = String(fecha.getFullYear()).padStart(4, '0')
+  const mes = String(fecha.getMonth() + 1).padStart(2, '0')
+  const dia = String(fecha.getDate()).padStart(2, '0')
+
+  return `${anio}-${mes}-${dia}`
+}
+
+const fechaActual = new Date()
+const hoy = fechaLocalISO(fechaActual)
+const fechaLimiteEdad = new Date(fechaActual)
+
+fechaLimiteEdad.setFullYear(fechaLimiteEdad.getFullYear() - 18)
+
+const limiteEdad = fechaLocalISO(fechaLimiteEdad)
+
+const soloLetras = (valor: string) =>
+  !valor || /^[\p{L}][\p{L} .'-]*$/u.test(valor) || 'Solo se permiten letras'
+
+const dpiValido = (valor: string | null) =>
+  /^[0-9]{13}$/.test(valor ?? '') || 'El DPI debe tener 13 dígitos'
+
+const telefonoValido = (valor: string | null) =>
+  /^[0-9]{8,11}$/.test(valor ?? '') || 'El teléfono debe tener entre 8 y 11 dígitos'
+
+function fechaNoFutura(valor: string | null) {
+  if (!valor)
+    return true
+
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(valor))
+    return 'Ingresa una fecha de nacimiento válida'
+
+  const fecha = new Date(`${valor}T12:00:00`)
+
+  if (Number.isNaN(fecha.getTime()) || fechaLocalISO(fecha) !== valor)
+    return 'Ingresa una fecha de nacimiento válida'
+
+  return valor <= hoy || 'La fecha de nacimiento no puede ser futura'
+}
+
+const mayorDeEdad = (valor: string | null) =>
+  !valor || valor <= limiteEdad || 'Debes tener al menos 18 años'
+
+const passwordSegura = (valor: string) =>
+  /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d).{8,72}$/.test(valor ?? '')
+  || 'Mínimo 8 caracteres, con mayúscula, minúscula y número'
+
+const coincidePassword = (valor: string) =>
+  valor === data.value.password || 'Las contraseñas no coinciden'
+
+const aceptaTerminos = (valor: boolean) => valor || 'Debes aceptar los términos'
+
+async function onSubmit() {
+  if (!refForm.value || cargando.value)
     return
 
   cargando.value = true
 
   try {
+    const { valid } = await refForm.value.validate()
+
+    if (!valid)
+      return
+
     const respuesta = await registrarCandidato(data.value)
 
     showToastSuccess(respuesta.message ?? 'Registro exitoso.')
 
     const vacante = route.query.vacante
 
-    await navigateTo({ path: '/login', query: vacante ? { vacante: String(vacante) } : {} })
+    await navigateTo({
+      path: '/login',
+      query: vacante ? { vacante: String(vacante) } : {},
+    })
   }
   catch (error: any) {
     const errores = error.response?.data?.errors
-    const primero = errores ? (Object.values(errores)[0] as string[] | undefined)?.[0] : null
+    const primerError = errores
+      ? (Object.values(errores)[0] as string[] | undefined)?.[0]
+      : undefined
 
-    showToastError(primero ?? error.response?.data?.message ?? 'No se pudo completar el registro')
+    showToastError(
+      primerError
+      ?? error.response?.data?.message
+      ?? 'No se pudo completar el registro',
+    )
   }
   finally {
     cargando.value = false
@@ -94,53 +176,103 @@ const onSubmit = async () => {
 
         <VCardText class="registro-cuerpo">
           <VForm ref="refForm" @submit.prevent="onSubmit">
-            <section aria-labelledby="registro-datos">
-              <h2 id="registro-datos" class="registro-seccion">
-                Datos personales
+            <section aria-labelledby="registro-nombres">
+              <h2 id="registro-nombres" class="registro-seccion">
+                Nombres y apellidos
               </h2>
 
               <VRow>
-                <VCol cols="12" md="6">
+                <VCol cols="12" md="4">
                   <AppTextField
-                    v-model="data.nombres"
-                    :rules="[requiredValidator]"
-                    label="Nombres"
-                    placeholder="Ingresa tus nombres"
+                    v-model="data.primer_nombre"
+                    :rules="[requiredValidator, soloLetras]"
+                    label="Primer nombre"
+                    placeholder="Primer nombre"
                     autocomplete="given-name"
+                  />
+                </VCol>
+
+                <VCol cols="12" md="4">
+                  <AppTextField
+                    v-model="data.segundo_nombre"
+                    :rules="[soloLetras]"
+                    label="Segundo nombre (opcional)"
+                    placeholder="Segundo nombre"
+                  />
+                </VCol>
+
+                <VCol cols="12" md="4">
+                  <AppTextField
+                    v-model="data.tercer_nombre"
+                    :rules="[soloLetras]"
+                    label="Tercer nombre (opcional)"
+                    placeholder="Tercer nombre"
                   />
                 </VCol>
 
                 <VCol cols="12" md="6">
                   <AppTextField
-                    v-model="data.apellidos"
-                    :rules="[requiredValidator]"
-                    label="Apellidos"
-                    placeholder="Ingresa tus apellidos"
+                    v-model="data.primer_apellido"
+                    :rules="[requiredValidator, soloLetras]"
+                    label="Primer apellido"
+                    placeholder="Primer apellido"
                     autocomplete="family-name"
                   />
                 </VCol>
 
                 <VCol cols="12" md="6">
                   <AppTextField
+                    v-model="data.segundo_apellido"
+                    :rules="[soloLetras]"
+                    label="Segundo apellido (opcional)"
+                    placeholder="Segundo apellido"
+                  />
+                </VCol>
+              </VRow>
+            </section>
+
+            <VDivider class="registro-divisor" />
+
+            <section aria-labelledby="registro-identificacion">
+              <h2 id="registro-identificacion" class="registro-seccion">
+                Identificación
+              </h2>
+
+              <VRow>
+                <VCol cols="12" md="6">
+                  <AppTextField
                     v-model="data.dpi"
                     :rules="[requiredValidator, dpiValido]"
                     label="DPI"
                     placeholder="13 dígitos sin espacios"
+                    type="text"
                     inputmode="numeric"
                     maxlength="13"
+                    @input.capture="soloDigitos"
                   />
                 </VCol>
 
                 <VCol cols="12" md="6">
                   <AppTextField
                     v-model="data.fecha_nacimiento"
-                    :rules="[requiredValidator, mayorDeEdad]"
+                    :rules="[requiredValidator, fechaNoFutura, mayorDeEdad]"
+                    :max="hoy"
                     label="Fecha de nacimiento"
                     type="date"
                     autocomplete="bday"
                   />
                 </VCol>
+              </VRow>
+            </section>
 
+            <VDivider class="registro-divisor" />
+
+            <section aria-labelledby="registro-contacto">
+              <h2 id="registro-contacto" class="registro-seccion">
+                Datos de contacto
+              </h2>
+
+              <VRow>
                 <VCol cols="12" md="6">
                   <AppTextField
                     v-model="data.email"
@@ -158,8 +290,11 @@ const onSubmit = async () => {
                     :rules="[requiredValidator, telefonoValido]"
                     label="Teléfono"
                     type="tel"
-                    placeholder="Ej. 5512 3456"
+                    inputmode="numeric"
+                    maxlength="11"
+                    placeholder="Ej. 55123456"
                     autocomplete="tel"
+                    @input.capture="soloDigitos"
                   />
                 </VCol>
               </VRow>

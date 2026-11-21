@@ -14,8 +14,11 @@ export interface VacantePublicaInterface {
 }
 
 export interface CandidatoExternoInterface {
-  nombres: string
-  apellidos: string
+  primer_nombre: string
+  segundo_nombre: string
+  tercer_nombre: string
+  primer_apellido: string
+  segundo_apellido: string
   dpi: string
   email: string
   telefono: string
