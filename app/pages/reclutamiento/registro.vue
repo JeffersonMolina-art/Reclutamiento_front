@@ -171,7 +171,7 @@
 }
 
 .registro-cabecera {
-  border-block-start: 4px solid #78b64b;
+  border-block-start: 4px solid #ffb300;
   padding: clamp(1.4rem, 4vw, 2.5rem);
   background: linear-gradient(125deg, #102e4d, #1f5680);
   color: white;

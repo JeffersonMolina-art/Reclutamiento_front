@@ -1,12 +1,16 @@
 export interface VacantePublicaInterface {
   id: number
-  titulo: string
+  nombre: string
   descripcion: string
-  departamento?: string | null
-  agencia?: string | null
-  tipo_contrato?: string | null
+  puesto?: string | null
+  sede?: string | null
+  cantidad_plazas?: string | null
+  modalidad_trabajo?: string | null
+  salario_minimo?: string | null
+  salario_maximo?: string | null
   fecha_publicacion?: string | null
-  fecha_cierre?: string | null
+  caracteristicas?: { nombre: string, valor: string }[]
+  requisitos?: { nombre: string, es_obligatorio: boolean }[]
 }
 
 export interface CandidatoExternoInterface {

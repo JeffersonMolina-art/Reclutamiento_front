@@ -23,7 +23,11 @@ const drawer = ref(false)
         />
 
         <NuxtLink to="/reclutamiento" class="portal-marca">
-          <span class="portal-marca-icono" aria-hidden="true">G</span>
+          <img
+            src="/guayacan_logo.svg"
+            alt="Logo de Cooperativa Guayacán"
+            class="portal-marca-logo"
+          >
           <span>
             Cooperativa Guayacán
             <small>Portal de empleo</small>
@@ -106,8 +110,16 @@ const drawer = ref(false)
   min-block-size: 100dvh;
 }
 
+.portal-layout > .v-main {
+  flex: 1 0 auto;
+}
+
+.portal-layout > .v-footer {
+  flex: 0 0 auto;
+}
+
 .portal-barra {
-  border-block-start: 4px solid #78b64b;
+  border-block-start: 4px solid #ffb300;
   border-block-end: 1px solid rgba(var(--v-border-color), var(--v-border-opacity));
 }
 
@@ -129,15 +141,9 @@ const drawer = ref(false)
   opacity: .75;
 }
 
-.portal-marca-icono {
-  display: grid;
-  flex: 0 0 2.6rem;
-  place-items: center;
-  block-size: 2.6rem;
-  border-radius: .65rem;
-  border-block-end: 3px solid #78b64b;
-  background: #153e66;
-  color: white;
+.portal-marca-logo {
+  block-size: 3.25rem;
+  inline-size: auto;
 }
 
 .portal-pie {
