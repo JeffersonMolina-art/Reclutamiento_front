@@ -202,7 +202,6 @@ onMounted(async () => {
 
   await cargar()
 
-  // Tras iniciar sesión desde una vacante concreta, se abre su detalle
   const deseada = Number(route.query.vacante)
   const encontrada = tarjetas.value.find(v => v.id === deseada)
 
@@ -512,7 +511,7 @@ onBeforeUnmount(() => {
             :disabled="postulando"
             @click="postularme(vacanteSeleccionada.id)"
           >
-            {{ estaAutenticado ? 'Postularme' : 'Iniciar sesión para postularme' }}
+            {{ estaAutenticado ? 'Postularme' : 'Iniciar sesión para postularte' }}
           </VBtn>
         </div>
       </div>
@@ -618,6 +617,7 @@ onBeforeUnmount(() => {
 }
 
 .vacantes-buscador-btn {
+  color: #ffffff !important;
   font-weight: 600;
   letter-spacing: 0.01em;
   border-radius: 0.65rem;
@@ -803,6 +803,7 @@ onBeforeUnmount(() => {
 
 .vacante-aplicar {
   margin-inline-start: auto;
+  color: #ffffff !important;
   font-weight: 600;
   border-radius: 0.65rem;
 }
@@ -1026,6 +1027,7 @@ onBeforeUnmount(() => {
 }
 
 .detalle-btn-postular {
+  color: #ffffff !important;
   font-weight: 600;
   padding-inline: 1.5rem;
   border-radius: 0.65rem;
