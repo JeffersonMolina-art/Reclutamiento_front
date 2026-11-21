@@ -124,6 +124,7 @@ export const useCandidatoSesion = () => {
   }
 
   return {
+    peticion,
     token,
     perfil,
     estaAutenticado,

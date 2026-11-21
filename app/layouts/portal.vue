@@ -61,6 +61,9 @@ const cerrarSesion = async () => {
           </VBtn>
 
           <template v-if="estaAutenticado">
+            <VBtn to="/reclutamiento/perfil" variant="text" prepend-icon="tabler-user-circle">
+              Mi perfil
+            </VBtn>
             <VBtn to="/reclutamiento/mis-postulaciones" variant="text" prepend-icon="tabler-list-check">
               Mis postulaciones
             </VBtn>
@@ -92,6 +95,13 @@ const cerrarSesion = async () => {
           :prepend-icon="item.icono"
           :title="item.titulo"
           exact
+          @click="drawer = false"
+        />
+        <VListItem
+          v-if="estaAutenticado"
+          to="/reclutamiento/perfil"
+          prepend-icon="tabler-user-circle"
+          title="Mi perfil"
           @click="drawer = false"
         />
         <VListItem
