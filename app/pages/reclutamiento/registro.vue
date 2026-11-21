@@ -79,37 +79,37 @@ const soloLetras = (valor: string) =>
   !valor || /^[\p{L}][\p{L} .'-]*$/u.test(valor) || 'Solo se permiten letras'
 
 const dpiValido = (valor: string | null) =>
-  /^[0-9]{13}$/.test(valor ?? '') || 'El DPI debe tener 13 dÃ­gitos'
+  /^[0-9]{13}$/.test(valor ?? '') || 'El DPI debe tener 13 digitos'
 
 const telefonoValido = (valor: string | null) =>
-  /^[0-9]{8,11}$/.test(valor ?? '') || 'El telÃ©fono debe tener entre 8 y 11 dÃ­gitos'
+  /^[0-9]{8,11}$/.test(valor ?? '') || 'El teléfono debe tener entre 8 y 11 digitos'
 
 function fechaNoFutura(valor: string | null) {
   if (!valor)
     return true
 
   if (!/^\d{4}-\d{2}-\d{2}$/.test(valor))
-    return 'Ingresa una fecha de nacimiento vÃ¡lida'
+    return 'Ingresa una fecha de nacimiento válida'
 
   const fecha = new Date(`${valor}T12:00:00`)
 
   if (Number.isNaN(fecha.getTime()) || fechaLocalISO(fecha) !== valor)
-    return 'Ingresa una fecha de nacimiento vÃ¡lida'
+    return 'Ingresa una fecha de nacimiento válida'
 
   return valor <= hoy || 'La fecha de nacimiento no puede ser futura'
 }
 
 const mayorDeEdad = (valor: string | null) =>
-  !valor || valor <= limiteEdad || 'Debes tener al menos 18 aÃ±os'
+  !valor || valor <= limiteEdad || 'Debes tener al menos 18 años'
 
 const passwordSegura = (valor: string) =>
   /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d).{8,72}$/.test(valor ?? '')
-  || 'MÃ­nimo 8 caracteres, con mayÃºscula, minÃºscula y nÃºmero'
+  || 'Mínimo 8 caracteres, con mayúscula, minúscula y número'
 
 const coincidePassword = (valor: string) =>
-  valor === data.value.password || 'Las contraseÃ±as no coinciden'
+  valor === data.value.password || 'Las contraseñas no coinciden'
 
-const aceptaTerminos = (valor: boolean) => valor || 'Debes aceptar los tÃ©rminos'
+const aceptaTerminos = (valor: boolean) => valor || 'Debes aceptar los términos'
 
 async function onSubmit() {
   if (!refForm.value || cargando.value)
