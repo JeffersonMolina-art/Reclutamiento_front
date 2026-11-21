@@ -48,6 +48,13 @@ async function postularme(vacanteId: number) {
       return
     }
 
+    if (error?.data?.requiere_cv) {
+      showToastError(error.data.message)
+      await navigateTo('/reclutamiento/perfil')
+
+      return
+    }
+
     if (estado === 409)
       await cargarPostulaciones().catch(() => {})
 
