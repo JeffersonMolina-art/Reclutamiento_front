@@ -8,8 +8,8 @@ export default defineNuxtConfig({
 
   app: {
     head: {
-      titleTemplate: '%s - Guayacan',
-      title: 'Creditos',
+      titleTemplate: '%s - Reclutamiento',
+      title: 'RRHH',
 
       link: [{
         rel: 'icon',
