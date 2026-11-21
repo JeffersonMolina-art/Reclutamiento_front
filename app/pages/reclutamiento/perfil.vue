@@ -160,10 +160,10 @@ const itemId = ref<number | null>(null)
 const actual = ref(false)
 const form = ref<Record<string, any>>({})
 
-const lista = (r: Recurso) => ({ conocimientos, experiencias, formaciones })[r]
+const lista = (recurso: Recurso) => ({ conocimientos, experiencias, formaciones })[recurso]
 
-function abrirDialogo(r: Recurso, item?: any) {
-  recurso.value = r
+function abrirDialogo(tipoRecurso: Recurso, item?: any) {
+  recurso.value = tipoRecurso
   itemId.value = item?.id ?? null
   form.value = item ? { ...item } : {}
 
@@ -173,12 +173,12 @@ function abrirDialogo(r: Recurso, item?: any) {
     form.value.fecha_fin = item.fecha_fin?.slice(0, 10) ?? null
   }
 
-  actual.value = !!item && r !== 'conocimientos' && !item.fecha_fin
+  actual.value = !!item && tipoRecurso !== 'conocimientos' && !item.fecha_fin
   dialogo.value = true
 }
 
-watch(actual, v => {
-  if (v)
+watch(actual, anterior => {
+  if (anterior)
     form.value.fecha_fin = null
 })
 
@@ -212,13 +212,13 @@ async function guardarItem() {
   }
 }
 
-async function recargarLista(r: Recurso) {
-  const { data } = await peticion<{ data: any[] }>(`/api/portal/perfil/${r}`)
+async function recargarLista(recurso: Recurso) {
+  const { data } = await peticion<{ data: any[] }>(`/api/portal/perfil/${recurso}`)
 
-  lista(r).value = data
+  lista(recurso).value = data
 }
 
-async function eliminarItem(r: Recurso, item: any) {
+async function eliminarItem(recurso: Recurso, item: any) {
   const preguntas: Record<Recurso, string> = {
     formaciones: '¿Eliminar esta formación académica?',
     experiencias: '¿Eliminar esta experiencia laboral?',
@@ -226,7 +226,7 @@ async function eliminarItem(r: Recurso, item: any) {
   }
 
   const confirmado = await preguntaEliminar(
-    preguntas[r],
+    preguntas[recurso],
     'El registro se quitará de tu perfil.',
   )
 
@@ -234,8 +234,8 @@ async function eliminarItem(r: Recurso, item: any) {
     return
 
   try {
-    await peticion(`/api/portal/perfil/${r}/${item.id}`, { method: 'DELETE' })
-    lista(r).value = lista(r).value.filter(i => i.id !== item.id)
+    await peticion(`/api/portal/perfil/${recurso}/${item.id}`, { method: 'DELETE' })
+    lista(recurso).value = lista(recurso).value.filter(i => i.id !== item.id)
     showToastSuccess('Registro eliminado.')
   }
   catch (error) {
