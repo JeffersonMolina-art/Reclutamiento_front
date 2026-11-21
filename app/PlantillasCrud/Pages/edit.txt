@@ -1,0 +1,81 @@
+<script setup lang="ts">
+import Fields from '@/views/pages/{{ directory }}/fields.vue'
+import type { {{ model }}Interface } from '@/types/{{ directory }}/types'
+import type { SendResponseInterface } from '@/types/sistema/types'
+
+definePageMeta({
+  navActiveLink: '{{ navActiveLink }}',
+  middleware: 'permissions',
+  action: 'editar {{ nombreModeloPermiso }}',
+  subject: '{{ model }}',
+})
+
+const { put, get } = useClienteRequest()
+const { showToastSuccess } = useToast()
+const { paginaEspera } = useCargandoPagina()
+
+const route = useRoute()
+const id = route.params.id
+const item{{ model }} = ref<{{ model }}Interface>(
+{{ camposFormCreate }}
+)
+
+const actualizar{{ model }} = async ({{ model }}: {{ model }}Interface): Promise<void> => {
+  paginaEspera.value = true
+  try {
+    const respuesta = await put<SendResponseInterface<{{ model }}Interface>>(`{{ url }}/${id}`, {{ model }})
+
+    showToastSuccess(respuesta.message)
+    navigateTo('/{{ directory }}')
+  }
+  catch (error: any) {
+    manejaError(error)
+  }
+  paginaEspera.value = false
+}
+
+const get{{ model }} = async () => {
+  paginaEspera.value = true
+  try {
+    const respuesta = await get<SendResponseInterface<{{ model }}Interface>>(`{{ url }}/${id}`)
+
+    item{{ model }}.value = respuesta.data
+  }
+  catch (error: any) {
+    manejaError(error)
+  }
+  paginaEspera.value = false
+}
+
+get{{ model }}()
+</script>
+
+<template>
+  <div class="d-flex flex-wrap justify-end justify-sm-space-between gap-y-4 gap-x-6 mb-4">
+    <h1>
+      Editar {{ titulo }}
+    </h1>
+    <VBtn
+      class="ml-auto"
+      color="secondary"
+      to="/{{ directory }}"
+    >
+      <VIcon class="tabler-arrow-back-up mr-1" />
+      Regresar
+    </VBtn>
+  </div>
+
+  <VCard>
+    <VCardText>
+      <Fields
+        v-if="tieneDatos(item{{ model }})"
+        :item="item{{ model }}"
+        @emitir-datos="actualizar{{ model }}"
+      />
+    </VCardText>
+  </VCard>
+</template>
+
+<style scoped lang="scss">
+
+</style>

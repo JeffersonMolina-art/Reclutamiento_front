@@ -1,0 +1,72 @@
+<script setup lang="ts">
+import type { VForm } from 'vuetify/lib/components/VForm'
+import type { {{ model }}Interface } from '@/types/{{ directory }}/types'
+
+
+interface Emit {
+  (e: 'emitirDatos', value: {{ model }}Interface ): void
+}
+interface PropsInterface {
+  item: {{ model }}Interface | null
+}
+
+const props = defineProps<PropsInterface>()
+const isFormValid = ref(false)
+const refForm = ref<VForm>()
+const emit = defineEmits<Emit>()
+const data = ref<{{ model }}Interface>(
+  {{ camposFormCreate }}
+)
+
+const onSubmit = () => {
+  refForm.value?.validate().then(({valid}) => {
+    if (valid) {
+      emit('emitirDatos', data.value)
+    }
+  })
+}
+
+if (props.item)
+  data.value = props.item
+</script>
+
+<template>
+
+  <VForm
+    ref="refForm"
+    v-model="isFormValid"
+    @submit.prevent="onSubmit"
+  >
+    <VRow>
+    {{ inputsFormulario }}
+      <VCol cols="12" md=12 class="text-end">
+        <VBtn
+          type="reset"
+          color="secondary"
+          to="/{{ directory }}"
+          class="mr-2"
+        >
+          <VIcon
+            icon="tabler-cancel"
+            start size="22"
+          />
+          Cancelar
+        </VBtn>
+        <VBtn
+          type="submit"
+          class="me-3"
+        >
+          <VIcon
+            icon="tabler-device-floppy"
+            start size="22"
+          />
+          Guardar
+        </VBtn>
+      </VCol>
+    </VRow>
+  </VForm>
+</template>
+
+<style scoped lang="scss">
+
+</style>

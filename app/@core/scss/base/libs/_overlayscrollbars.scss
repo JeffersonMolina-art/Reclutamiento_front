@@ -1,0 +1,16 @@
+@import "../../../../../node_modules/.pnpm/overlayscrollbars@2.16.0/node_modules/overlayscrollbars/styles/overlayscrollbars.css";
+
+.os-theme-app {
+  --os-size: 0.5rem;
+  --os-padding-perpendicular: 2px;
+  --os-padding-axis: 2px;
+  --os-track-border-radius: 10px;
+  --os-track-bg: transparent;
+  --os-track-bg-hover: transparent;
+  --os-track-bg-active: transparent;
+  --os-handle-border-radius: 10px;
+  --os-handle-bg: rgb(var(--v-theme-perfect-scrollbar-thumb));
+  --os-handle-bg-hover: rgb(var(--v-theme-perfect-scrollbar-thumb));
+  --os-handle-bg-active: rgb(var(--v-theme-perfect-scrollbar-thumb));
+  --os-handle-min-size: 33px;
+}

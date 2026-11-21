@@ -1,0 +1,688 @@
+<script lang="tsx" setup>
+import { useStorage } from '@vueuse/core'
+import { OverlayScrollbarsComponent } from 'overlayscrollbars-vue'
+import { useTheme } from 'vuetify'
+import { Direction, Layout, Skins, Theme } from '@core/enums'
+import { useConfigStore } from '@core/stores/config'
+import horizontalLight from '@images/customizer-icons/horizontal-light.svg'
+import { AppContentLayoutNav, ContentWidth } from '@layouts/enums'
+import { cookieRef } from '@layouts/stores/config'
+import { themeConfig } from '@themeConfig'
+import type { preferenciasUsuario } from '@core/types'
+
+import borderSkin from '@images/customizer-icons/border-light.svg'
+import collapsed from '@images/customizer-icons/collapsed-light.svg'
+import compact from '@images/customizer-icons/compact-light.svg'
+import defaultSkin from '@images/customizer-icons/default-light.svg'
+import ltrSvg from '@images/customizer-icons/ltr-light.svg'
+import rtlSvg from '@images/customizer-icons/rtl-light.svg'
+import wideSvg from '@images/customizer-icons/wide-light.svg'
+import { staticPrimaryColor, staticPrimaryDarkenColor } from '@/plugins/vuetify/theme'
+
+const isNavDrawerOpen = ref(false)
+
+const configStore = useConfigStore()
+
+// 👉 Primary Color
+const vuetifyTheme = useTheme()
+
+const colors = computed<{ main: string; darken: string }[]>(() => {
+  const isDark = vuetifyTheme.current.value.dark
+
+  if (isDark) {
+    return [
+      { main: staticPrimaryColor, darken: staticPrimaryDarkenColor },
+      { main: '#8DC63F', darken: '#7DB238' },
+      { main: '#8A8585', darken: '#8A8585' },
+    ]
+  }
+
+  return [
+    { main: staticPrimaryColor, darken: staticPrimaryDarkenColor },
+    { main: '#8DC63F', darken: '#7DB238' },
+    { main: '#23304A', darken: '#23304A' },
+  ]
+})
+
+const customPrimaryColor = ref('#663131')
+
+// ℹ️ It will set primary color for current theme only
+const setPrimaryColor = useDebounceFn((color: { main: string; darken: string }) => {
+  const themeName = vuetifyTheme.global.name.value
+
+  // Forzamos la reactividad reemplazando el objeto de colores completo
+  vuetifyTheme.themes.value[themeName].colors = {
+    ...vuetifyTheme.themes.value[themeName].colors,
+    'primary': color.main,
+    'primary-darken-1': color.darken,
+  }
+
+  // Guardamos en cookies inmediatamente para que el F5 funcione antes de darle al botón "Guardar"
+  // if (themeName === 'light') {
+  //   cookieRef('color_primario_tema_light').value = color.main
+  //   cookieRef('color_oscurecimiento_primario_tema_light').value = color.darken
+  // } else {
+  //   cookieRef('color_primario_tema_dark').value = color.main
+  //   cookieRef('color_oscurecimiento_primario_tema_dark').value = color.darken
+  // }
+}, 100)
+
+// 👉 Mode
+const themeMode = computed(() => {
+  return [
+    {
+      bgImage: 'tabler-sun',
+      value: Theme.Light,
+      label: 'Claro',
+    },
+    {
+      bgImage: 'tabler-moon-stars',
+      value: Theme.Dark,
+      label: 'Oscuro',
+    },
+    {
+      bgImage: 'tabler-device-desktop-analytics',
+      value: Theme.System,
+      label: 'Sistema',
+    },
+  ]
+})
+
+// 👉 Skin
+const themeSkin = computed(() => {
+  return [
+    {
+      bgImage: defaultSkin,
+      value: Skins.Default,
+      label: 'Default',
+    },
+    {
+      bgImage: borderSkin,
+      value: Skins.Bordered,
+      label: 'Bordeada',
+    },
+  ]
+})
+
+// 👉 Layout
+const currentLayout = ref<'vertical' | 'collapsed' | 'horizontal'>(configStore.isVerticalNavCollapsed ? 'collapsed' : configStore.appContentLayoutNav)
+
+const layouts = computed(() => {
+  return [
+    {
+      bgImage: defaultSkin,
+      value: Layout.Vertical,
+      label: 'Vertical',
+    },
+    {
+      bgImage: collapsed,
+      value: Layout.Collapsed,
+      label: 'Colapsado',
+    },
+    {
+      bgImage: horizontalLight,
+      value: Layout.Horizontal,
+      label: 'Horizontal',
+    },
+  ]
+})
+
+watch(currentLayout, () => {
+  if (currentLayout.value === 'collapsed') {
+    configStore.isVerticalNavCollapsed = true
+    configStore.appContentLayoutNav = AppContentLayoutNav.Vertical
+  }
+  else {
+    configStore.isVerticalNavCollapsed = false
+    configStore.appContentLayoutNav = currentLayout.value
+
+    // cookieRef('navBar_loyout'', currentLayout.value).value = currentLayout.value
+  }
+})
+
+// watch vertical sidebar collapse state
+watch(
+  () => configStore.isVerticalNavCollapsed,
+  () => {
+    const appContentLayoutNav = configStore.appContentLayoutNav as 'vertical' | 'horizontal'
+
+    currentLayout.value = configStore.isVerticalNavCollapsed
+      ? 'collapsed'
+      : appContentLayoutNav
+  },
+)
+
+// 👉 Content Width
+const contentWidth = computed(() => {
+  return [
+    {
+      bgImage: compact,
+      value: ContentWidth.Boxed,
+      label: 'Compacto',
+    },
+    {
+      bgImage: wideSvg,
+      value: ContentWidth.Fluid,
+      label: 'Ancho',
+    },
+  ]
+})
+
+// 👉 Direction
+const currentDir = ref(configStore.isAppRTL ? 'rtl' : 'ltr')
+
+const direction = computed(() => {
+  return [
+    {
+      bgImage: ltrSvg,
+      value: Direction.Ltr,
+      label: 'De izquierda a derecha',
+    },
+    {
+      bgImage: rtlSvg,
+      value: Direction.Rtl,
+      label: 'De derecha a izquierda',
+    },
+  ]
+})
+
+watch(currentDir, () => {
+  if (currentDir.value === 'rtl')
+    configStore.isAppRTL = true
+  else
+    configStore.isAppRTL = false
+})
+
+// check if any value set in cookie
+const isCookieHasAnyValue = ref(false)
+
+watch([
+  () => vuetifyTheme.current.value.colors.primary,
+  configStore.$state,
+], () => {
+  const initialConfigValue = [
+    staticPrimaryColor,
+    staticPrimaryColor,
+    themeConfig.app.theme,
+    themeConfig.app.skin,
+    themeConfig.verticalNav.isVerticalNavSemiDark,
+    themeConfig.verticalNav.isVerticalNavCollapsed,
+    themeConfig.app.contentWidth,
+    false,
+    themeConfig.app.contentLayoutNav,
+  ]
+
+  const themeConfigValue = [
+    vuetifyTheme.themes.value.light.colors.primary,
+    vuetifyTheme.themes.value.dark.colors.primary,
+    configStore.theme,
+    configStore.skin,
+    configStore.isVerticalNavSemiDark,
+    configStore.isVerticalNavCollapsed,
+    configStore.appContentWidth,
+    configStore.isAppRTL,
+    configStore.appContentLayoutNav,
+  ]
+
+  currentDir.value = configStore.isAppRTL ? 'rtl' : 'ltr'
+
+  isCookieHasAnyValue.value = JSON.stringify(themeConfigValue) !== JSON.stringify(initialConfigValue)
+}, { deep: true, immediate: true })
+
+// remove all theme related values from localStorage
+const resetCustomizer = async () => {
+  if (isCookieHasAnyValue.value) {
+    // reset themeConfig values
+    vuetifyTheme.themes.value.light.colors.primary = staticPrimaryColor
+    vuetifyTheme.themes.value.dark.colors.primary = staticPrimaryColor
+    vuetifyTheme.themes.value.light.colors['primary-darken-1'] = staticPrimaryDarkenColor
+    vuetifyTheme.themes.value.dark.colors['primary-darken-1'] = staticPrimaryDarkenColor
+
+    configStore.theme = themeConfig.app.theme
+    configStore.skin = themeConfig.app.skin
+    configStore.isVerticalNavSemiDark = themeConfig.verticalNav.isVerticalNavSemiDark
+    configStore.appContentLayoutNav = themeConfig.app.contentLayoutNav
+    configStore.appContentWidth = themeConfig.app.contentWidth
+    configStore.isAppRTL = false
+    configStore.isVerticalNavCollapsed = themeConfig.verticalNav.isVerticalNavCollapsed
+    useStorage<string | null>('initial-loader-color', null).value = staticPrimaryColor
+    currentLayout.value = themeConfig.app.contentLayoutNav
+
+    cookieRef('color_primario_tema_light', null).value = null
+    cookieRef('color_primario_tema_dark', null).value = null
+    cookieRef('color_oscurecimiento_primario_tema_dark', null).value = null
+    cookieRef('color_oscurecimiento_primario_tema_light', null).value = null
+
+    await nextTick()
+
+    isCookieHasAnyValue.value = false
+
+    customPrimaryColor.value = '#ffffff'
+
+    await guardarPreferencias()
+  }
+}
+
+const { post } = useClienteRequest()
+
+const { showToastSuccess, showToastError } = useToast()
+
+const guardarPreferencias = async (): Promise<void> => {
+  try {
+    const data: preferenciasUsuario = {
+
+      tema: configStore.theme as 'light' | 'dark' | 'system',
+      tema_color: configStore.tema_color as 'light' | 'dark',
+      aspecto: configStore.skin as 'default' | 'bordered',
+      ancho_contenido_aplicacion: configStore.appContentWidth as 'fluid' | 'boxed',
+      desenfoque_habilitado_barra_navegacion: configStore.isNavbarBlurEnabled ?? false,
+      navBar_loyout: configStore.appContentLayoutNav,
+      es_navBar_vertical_semioscura: configStore.isVerticalNavSemiDark ?? false,
+      esta_navBar_vertical_colapsada: configStore.isVerticalNavCollapsed,
+      navBar_vertical_tipo: configStore.navbarType as 'sticky' | 'static' | 'hidden',
+      navBar_horizontal_tipo: configStore.horizontalNavType as 'sticky' | 'static' | 'hidden',
+      color_primario_tema_light: vuetifyTheme.themes.value.light.colors.primary,
+      color_oscurecimiento_primario_tema_light: vuetifyTheme.themes.value.light.colors['primary-darken-1'],
+      color_primario_tema_dark: vuetifyTheme.themes.value.dark.colors.primary,
+      color_oscurecimiento_primario_tema_dark: vuetifyTheme.themes.value.dark.colors['primary-darken-1'],
+      direccion: configStore.isAppRTL ? 'rtl' : 'ltr',
+    }
+
+    await post('api/user_preferencias', data)
+
+    await asignarValorACokkies()
+
+    configStore.asignarDataACookiesDefault()
+
+    showToastSuccess('Preferencias Actualizadas')
+  }
+  catch (error) {
+    showToastError(error.message)
+  }
+}
+
+const asignarValorACokkies = () => {
+  cookieRef<string>('color_primario_tema_light').value = vuetifyTheme.themes.value.light.colors.primary
+  cookieRef<string>('color_oscurecimiento_primario_tema_light').value = vuetifyTheme.themes.value.light.colors['primary-darken-1']
+  cookieRef<string>('color_primario_tema_dark').value = vuetifyTheme.themes.value.dark.colors.primary
+  cookieRef<string>('color_oscurecimiento_primario_tema_dark').value = vuetifyTheme.themes.value.dark.colors['primary-darken-1']
+  cookieRef('tema_color').value = configStore.tema_color
+  cookieRef('tema').value = configStore.theme
+  cookieRef('aspecto').value = configStore.skin
+  cookieRef('es_navBar_vertical_semioscura').value = configStore.isVerticalNavSemiDark
+  cookieRef('esta_navBar_vertical_colapsada').value = configStore.isVerticalNavCollapsed
+  cookieRef('navBar_loyout').value = configStore.appContentLayoutNav
+  cookieRef('ancho_contenido_aplicacion').value = configStore.appContentWidth
+  cookieRef('orientacion').value = configStore.isAppRTL ? 'rtl' : 'ltr'
+  cookieRef('navBar_vertical_tipo').value = configStore.navbarType
+  cookieRef('navBar_horizontal_tipo').value = configStore.horizontalNavType
+}
+
+onMounted(() => {
+  // Leemos las cookies de color tan pronto como el componente se monta
+  const cLight = cookieRef<string | null>('color_primario_tema_light', null).value
+  const cDark = cookieRef<string | null>('color_primario_tema_dark', null).value
+  const cLightDarken = cookieRef<string | null>('color_oscurecimiento_primario_tema_light', null).value
+  const cDarkDarken = cookieRef<string | null>('color_oscurecimiento_primario_tema_dark', null).value
+
+  if (cLight) {
+    vuetifyTheme.themes.value.light.colors.primary = cLight
+    if (cLightDarken)
+      vuetifyTheme.themes.value.light.colors['primary-darken-1'] = cLightDarken
+  }
+
+  if (cDark) {
+    vuetifyTheme.themes.value.dark.colors.primary = cDark
+    if (cDarkDarken)
+      vuetifyTheme.themes.value.dark.colors['primary-darken-1'] = cDarkDarken
+  }
+})
+</script>
+
+<template>
+  <div class="d-lg-block d-none">
+    <VBtn
+      class="app-customizer-toggler rounded-s-lg rounded-0"
+      icon
+      style="z-index: 1001;"
+      @click="isNavDrawerOpen = true"
+    >
+      <VIcon
+        icon="tabler-settings"
+        size="22"
+      />
+    </VBtn>
+
+    <VNavigationDrawer
+      v-model="isNavDrawerOpen"
+      :scrim="false"
+      border="none"
+      class="app-customizer"
+      elevation="10"
+      location="end"
+      temporary
+      touchless
+      width="400"
+    >
+      <!-- 👉 Header -->
+      <div class="customizer-heading d-flex align-center justify-space-between">
+        <div>
+          <h6 class="text-h6">
+            Personalizar
+          </h6>
+          <p class="text-body-2 mb-0">
+            Personalizar y obtener una vista previa en tiempo real
+          </p>
+        </div>
+
+        <div class="d-flex align-center gap-1">
+          <VBtn
+            color="medium-emphasis"
+            icon
+            size="small"
+            variant="text"
+            @click="guardarPreferencias"
+          >
+            <VTooltip
+              activator="parent"
+              location="top"
+              start
+            >
+              <span>Guardar Cambios</span>
+            </VTooltip>
+            <VIcon
+              icon="tabler-device-floppy"
+              size="24"
+            />
+          </VBtn>
+
+          <VBtn
+            color="medium-emphasis"
+            icon
+            size="small"
+            variant="text"
+            @click="resetCustomizer"
+          >
+            <VBadge
+              v-show="isCookieHasAnyValue"
+              color="error"
+              dot
+              offset-x="-29"
+              offset-y="-14"
+            />
+
+            <VIcon
+              color="high-emphasis"
+              icon="tabler-refresh"
+              size="24"
+            />
+          </VBtn>
+
+          <VBtn
+            color="medium-emphasis"
+            icon
+            size="small"
+            variant="text"
+            @click="isNavDrawerOpen = false"
+          >
+            <VIcon
+              color="high-emphasis"
+              icon="tabler-x"
+              size="24"
+            />
+          </VBtn>
+        </div>
+      </div>
+
+      <VDivider />
+
+      <OverlayScrollbarsComponent
+        :options="{ scrollbars: { autoHide: 'leave' }, overflow: { x: 'hidden' } }"
+        class="os-theme-app"
+        element="ul"
+        defer
+      >
+        <!-- SECTION Theming -->
+        <CustomizerSection
+          :divider="false"
+          title="Tema"
+        >
+          <!-- 👉 Primary Color -->
+          <div class="d-flex flex-column gap-2">
+            <h6 class="text-h6">
+              Color Primario
+            </h6>
+
+            <div
+              class="d-flex app-customizer-primary-colors"
+              style="column-gap: 0.75rem; margin-block-start: 2px;"
+            >
+              <div
+                v-for="color in colors"
+                :key="color.main"
+                :class="vuetifyTheme.current.value.colors.primary === color.main ? 'active' : ''"
+                :style="vuetifyTheme.current.value.colors.primary === color.main ? `outline-color: ${color.main}; outline-width:2px;` : `--v-color:${color.main}`"
+                class="primary-color-wrapper cursor-pointer"
+                style="
+              border-radius: 0.375rem;
+              outline: 1px solid rgba(var(--v-border-color), var(--v-border-opacity));
+              padding-block: 0.5rem;
+              padding-inline: 0.625rem;"
+                @click="setPrimaryColor(color)"
+              >
+                <div
+                  :style="{ backgroundColor: color.main }"
+                  style="border-radius: 0.375rem;block-size: 2.125rem; inline-size: 1.8938rem;"
+                />
+              </div>
+            </div>
+          </div>
+
+          <!-- 👉 Theme -->
+          <div class="d-flex flex-column gap-2">
+            <h6 class="text-h6">
+              Tema
+            </h6>
+
+            <CustomRadiosWithImage
+              :key="configStore.theme"
+              v-model:selected-radio="configStore.theme"
+              :grid-column="{ cols: '4' }"
+              :radio-content="themeMode"
+              class="customizer-skins"
+            >
+              <template #label="item">
+                <span class="text-sm text-medium-emphasis mt-1">{{ item?.label }}</span>
+              </template>
+
+              <template #content="{ item }">
+                <div
+                  class="customizer-skins-icon-wrapper d-flex align-center justify-center py-3 w-100"
+                  style="min-inline-size: 100%;"
+                >
+                  <VIcon
+                    :icon="item.bgImage"
+                    color="high-emphasis"
+                    size="30"
+                  />
+                </div>
+              </template>
+            </CustomRadiosWithImage>
+          </div>
+
+          <!-- 👉 Skin -->
+          <div class="d-flex flex-column gap-2">
+            <h6 class="text-h6">
+              Aspecto
+            </h6>
+
+            <CustomRadiosWithImage
+              :key="configStore.skin"
+              v-model:selected-radio="configStore.skin"
+              :grid-column="{ cols: '4' }"
+              :radio-content="themeSkin"
+            >
+              <template #label="item">
+                <span class="text-sm text-medium-emphasis">{{ item?.label }}</span>
+              </template>
+            </CustomRadiosWithImage>
+          </div>
+
+          <!-- 👉 Semi Dark -->
+          <div
+            :class="vuetifyTheme.global.name.value === 'light' && configStore.appContentLayoutNav === AppContentLayoutNav.Vertical ? 'd-flex' : 'd-none'"
+            class="align-center justify-space-between"
+          >
+            <VLabel
+              class="text-h6 text-high-emphasis"
+              for="customizer-semi-dark"
+            >
+              Menú semioscuro
+            </VLabel>
+
+            <div>
+              <VSwitch
+                id="customizer-semi-dark"
+                v-model="configStore.isVerticalNavSemiDark"
+                class="ms-2"
+              />
+            </div>
+          </div>
+        </CustomizerSection>
+        <!-- !SECTION -->
+
+        <!-- SECTION LAYOUT -->
+        <CustomizerSection title="Disposición">
+          <!-- 👉 Layouts -->
+          <div class="d-flex flex-column gap-2">
+            <h6 class="text-base font-weight-medium">
+              Diseño
+            </h6>
+
+            <CustomRadiosWithImage
+              :key="currentLayout"
+              v-model:selected-radio="currentLayout"
+              :grid-column="{ cols: '4' }"
+              :radio-content="layouts"
+            >
+              <template #label="item">
+                <span class="text-sm text-medium-emphasis">{{ item.label }}</span>
+              </template>
+            </CustomRadiosWithImage>
+          </div>
+
+          <!-- 👉 Content Width -->
+          <div class="d-flex flex-column gap-2">
+            <h6 class="text-base font-weight-medium">
+              Content
+            </h6>
+
+            <CustomRadiosWithImage
+              :key="configStore.appContentWidth"
+              v-model:selected-radio="configStore.appContentWidth"
+              :grid-column="{ cols: '4' }"
+              :radio-content="contentWidth"
+            >
+              <template #label="item">
+                <span class="text-sm text-medium-emphasis">{{ item.label }}</span>
+              </template>
+            </CustomRadiosWithImage>
+          </div>
+
+          <!-- 👉 Direction -->
+          <div class="d-flex flex-column gap-2">
+            <h6 class="text-base font-weight-medium">
+              Dirección
+            </h6>
+
+            <CustomRadiosWithImage
+              :key="currentDir"
+              v-model:selected-radio="currentDir"
+              :grid-column="{ cols: '4' }"
+              :radio-content="direction"
+            >
+              <template #label="item">
+                <span class="text-sm text-medium-emphasis">{{ item?.label }}</span>
+              </template>
+            </CustomRadiosWithImage>
+          </div>
+        </CustomizerSection>
+        <!-- !SECTION -->
+      </OverlayScrollbarsComponent>
+    </VNavigationDrawer>
+  </div>
+</template>
+
+<style lang="scss">
+@use "@layouts/styles/mixins" as layoutMixins;
+
+.app-customizer {
+  &.v-navigation-drawer--temporary:not(.v-navigation-drawer--active) {
+    transform: translateX(110%) !important;
+
+    @include layoutMixins.rtl {
+      transform: translateX(-110%) !important;
+    }
+  }
+
+  .customizer-section {
+    display: flex;
+    flex-direction: column;
+    padding: 1.5rem;
+    gap: 1.5rem;
+  }
+
+  .customizer-heading {
+    padding-block: 1rem;
+    padding-inline: 1.5rem;
+  }
+
+  .custom-input-wrapper {
+    .v-col {
+      padding-inline: 10px;
+    }
+
+    .v-label.custom-input {
+      border: none;
+      color: rgb(var(--v-theme-on-surface));
+      outline: 1px solid rgba(var(--v-border-color), var(--v-border-opacity));
+    }
+  }
+
+  .v-navigation-drawer__content {
+    display: flex;
+    flex-direction: column;
+  }
+
+  .v-label.custom-input.active {
+    border-color: transparent;
+    outline: 2px solid rgb(var(--v-theme-primary));
+  }
+
+  .v-label.custom-input:not(.active):hover {
+    border-color: rgba(var(--v-border-color), 0.22);
+  }
+
+  .customizer-skins {
+    .custom-input.active {
+      .customizer-skins-icon-wrapper {
+        background-color: rgba(var(--v-global-theme-primary), var(--v-selected-opacity));
+      }
+    }
+  }
+
+  .app-customizer-primary-colors {
+    .primary-color-wrapper:not(.active) {
+      &:hover {
+        outline-color: rgba(var(--v-border-color), 0.22) !important;
+      }
+    }
+  }
+}
+
+.app-customizer-toggler {
+  position: fixed !important;
+  inset-block-start: 20%;
+  inset-inline-end: 0;
+}
+</style>
