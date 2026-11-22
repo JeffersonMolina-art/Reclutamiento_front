@@ -71,7 +71,7 @@ const inicialesCandidato = computed(() => {
 const idPostulacion = computed(() => (route.params as { id: string }).id)
 
 const { put } = useClienteRequest()
-const { showToastSuccess } = useToast()
+const { showToastSuccess, showToastError } = useToast()
 
 const dialogVeredicto = ref(false)
 const guardando = ref(false)
@@ -173,6 +173,18 @@ onMounted(cargarPostulacion)
 onBeforeUnmount(() => {
   if (urlVistaPreviaCurriculum.value)
     URL.revokeObjectURL(urlVistaPreviaCurriculum.value)
+})
+
+watch(() => form.value.puntaje_fase, (valor) => {
+  if (valor === null || String(valor) === '')
+    return
+
+  const numero = Number(valor)
+
+  if (numero > 100 || numero < 0) {
+    form.value.puntaje_fase = null
+    showToastError('El puntaje debe estar entre 0 y 100')
+  }
 })
 </script>
 
@@ -747,6 +759,8 @@ onBeforeUnmount(() => {
             v-model="form.puntaje_fase"
             label="Puntaje de esta fase"
             type="number"
+            min="0"
+            max="100"
           />
         </VCol>
         <VCol cols="12">

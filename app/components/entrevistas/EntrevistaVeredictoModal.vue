@@ -13,7 +13,7 @@ const emit = defineEmits<{
 }>()
 
 const { put } = useClienteRequest()
-const { showToastSuccess } = useToast()
+const { showToastSuccess, showToastError } = useToast()
 
 const guardando = ref(false)
 const veredicto = reactive<{ estado_id: number | null; comentario: string; puntaje_fase: number | string | null }>({
@@ -61,6 +61,17 @@ async function darVeredicto() {
     guardando.value = false
   }
 }
+watch(() => veredicto.puntaje_fase, (valor) => {
+  if (valor === null || valor === '')
+    return
+
+  const numero = Number(valor)
+
+  if (numero > 100 || numero < 0) {
+    veredicto.puntaje_fase = null
+    showToastError('El puntaje debe estar entre 0 y 100')
+  }
+})
 </script>
 
 <template>
@@ -91,6 +102,8 @@ async function darVeredicto() {
           v-model="veredicto.puntaje_fase"
           label="Puntaje de esta fase"
           type="number"
+          min="0"
+          max="100"
         />
       </VCol>
       <VCol cols="12">

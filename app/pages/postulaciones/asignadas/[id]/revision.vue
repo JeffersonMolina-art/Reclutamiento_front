@@ -12,7 +12,7 @@ definePageMeta({
 const route = useRoute()
 const { get, put } = useClienteRequest()
 const { paginaEspera } = useCargandoPagina()
-const { showToastSuccess } = useToast()
+const { showToastSuccess, showToastError } = useToast()
 
 const postulacion = ref<any>(null)
 const guardando = ref(false)
@@ -200,6 +200,18 @@ async function guardarDecision() {
     guardando.value = false
   }
 }
+
+watch(() => formulario.value.puntaje_fase, (valor) => {
+  if (valor === null || String(valor) === '')
+    return
+
+  const numero = Number(valor)
+
+  if (numero > 100 || numero < 0) {
+    formulario.value.puntaje_fase = null
+    showToastError('El puntaje debe estar entre 0 y 100')
+  }
+})
 
 onMounted(cargarPostulacion)
 </script>
@@ -682,6 +694,8 @@ onMounted(cargarPostulacion)
             v-model="formulario.puntaje_fase"
             label="Puntaje de esta fase"
             type="number"
+            min="0"
+            max="100"
           />
         </VCol>
         <VCol cols="12">
