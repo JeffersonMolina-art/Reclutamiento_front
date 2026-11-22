@@ -2,35 +2,25 @@
 import type { VForm } from 'vuetify/lib/components/VForm'
 import type { DepartamentoInterface } from '@/types/catalogos/departamento/types'
 
+type DatosDepartamento = Pick<DepartamentoInterface, 'nombre' | 'estado'>
 
-interface Emit {
-  (e: 'emitirDatos', value: DepartamentoInterface ): void
-}
-interface PropsInterface {
-  item: DepartamentoInterface | null
-}
+const props = defineProps<{ item: DepartamentoInterface | null }>()
+const emit = defineEmits<{ emitirDatos: [value: DatosDepartamento] }>()
 
-const props = defineProps<PropsInterface>()
 const isFormValid = ref(false)
 const refForm = ref<VForm>()
-const emit = defineEmits<Emit>()
-const data = ref<DepartamentoInterface>(
-  { codigo: null,
-nombre: null,
-estado: null,
-codigo_bankworks: null }
-)
+const data = ref<DatosDepartamento>({ nombre: null, estado: null })
+
+watch(() => props.item, item => {
+  data.value = { nombre: item?.nombre ?? null, estado: item?.estado ?? null }
+}, { immediate: true })
 
 const onSubmit = () => {
-  refForm.value?.validate().then(({valid}) => {
-    if (valid) {
-      emit('emitirDatos', data.value)
-    }
+  refForm.value?.validate().then(({ valid }) => {
+    if (valid)
+      emit('emitirDatos', { ...data.value })
   })
 }
-
-if (props.item)
-  data.value = props.item
 </script>
 
 <template>
@@ -41,15 +31,6 @@ if (props.item)
     @submit.prevent="onSubmit"
   >
     <VRow>
-    
-    <VCol cols="12" md="6">
-      <AppTextField
-        v-model="data.codigo"
-        :rules="[requiredValidator]"
-        label="Codigo"
-        placeholder="Ingrese Codigo"
-      />
-    </VCol>
   
     <VCol cols="12" md="6">
       <AppTextField
@@ -66,15 +47,6 @@ if (props.item)
         :rules="[requiredValidator]"
         label="Estado"
         placeholder="Ingrese Estado"
-      />
-    </VCol>
-  
-    <VCol cols="12" md="6">
-      <AppTextField
-        v-model="data.codigo_bankworks"
-        :rules="[requiredValidator]"
-        label="Codigo Bankworks"
-        placeholder="Ingrese Codigo Bankworks"
       />
     </VCol>
   

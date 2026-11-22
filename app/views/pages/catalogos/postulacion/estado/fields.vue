@@ -51,14 +51,17 @@ if (props.item)
     </VCol>
   
     <VCol cols="12" md="6">
-      <AppTextField
-        v-model="data.bandeja_id"
-        :rules="[requiredValidator]"
+      <SelectorPro
+        v-model:item-selected="data.bandeja_id"
+        url="api/catalogo/bandeja"
+        item-value="id"
+        item-title="nombre"
+        :campos-a-filtrar="['nombre']"
         label="Bandeja"
-        placeholder="Ingrese Bandeja"
+        placeholder="Seleccione Bandeja"
       />
     </VCol>
-  
+
     <VCol cols="12" md="6">
       <AppTextField
         v-model="data.codigo"

@@ -87,15 +87,6 @@ getUnidad()
     
       <VListItemTitle>
         <h6 class="text-h6">
-          Emails:
-          <div class="d-inline-block text-capitalize text-body-1">
-            {{ item.emails }}
-          </div>
-        </h6>
-      </VListItemTitle>
-    
-      <VListItemTitle>
-        <h6 class="text-h6">
           Estado:
           <div class="d-inline-block text-capitalize text-body-1">
             {{ item.estado }}
@@ -107,7 +98,7 @@ getUnidad()
         <h6 class="text-h6">
           Regiones:
           <div class="d-inline-block text-capitalize text-body-1">
-            {{ item.regiones_id }}
+            {{ item.nombre_regiones }}
           </div>
         </h6>
       </VListItemTitle>
@@ -116,61 +107,7 @@ getUnidad()
         <h6 class="text-h6">
           Gerencia:
           <div class="d-inline-block text-capitalize text-body-1">
-            {{ item.gerencia_id }}
-          </div>
-        </h6>
-      </VListItemTitle>
-    
-      <VListItemTitle>
-        <h6 class="text-h6">
-          Jefe:
-          <div class="d-inline-block text-capitalize text-body-1">
-            {{ item.jefe_id }}
-          </div>
-        </h6>
-      </VListItemTitle>
-    
-      <VListItemTitle>
-        <h6 class="text-h6">
-          Auxiliar:
-          <div class="d-inline-block text-capitalize text-body-1">
-            {{ item.auxiliar_id }}
-          </div>
-        </h6>
-      </VListItemTitle>
-    
-      <VListItemTitle>
-        <h6 class="text-h6">
-          Municipio:
-          <div class="d-inline-block text-capitalize text-body-1">
-            {{ item.municipio_id }}
-          </div>
-        </h6>
-      </VListItemTitle>
-    
-      <VListItemTitle>
-        <h6 class="text-h6">
-          Departamento:
-          <div class="d-inline-block text-capitalize text-body-1">
-            {{ item.departamento_id }}
-          </div>
-        </h6>
-      </VListItemTitle>
-    
-      <VListItemTitle>
-        <h6 class="text-h6">
-          Latitud:
-          <div class="d-inline-block text-capitalize text-body-1">
-            {{ item.latitud }}
-          </div>
-        </h6>
-      </VListItemTitle>
-    
-      <VListItemTitle>
-        <h6 class="text-h6">
-          Longitud:
-          <div class="d-inline-block text-capitalize text-body-1">
-            {{ item.longitud }}
+            {{ item.nombre_gerencia }}
           </div>
         </h6>
       </VListItemTitle>

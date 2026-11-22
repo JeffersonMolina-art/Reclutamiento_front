@@ -58,15 +58,6 @@ getPais()
         v-if="tieneDatos(item)"
         class="card-list mt-2"
       >
-        
-      <VListItemTitle>
-        <h6 class="text-h6">
-          Codigo:
-          <div class="d-inline-block text-capitalize text-body-1">
-            {{ item.codigo }}
-          </div>
-        </h6>
-      </VListItemTitle>
     
       <VListItemTitle>
         <h6 class="text-h6">

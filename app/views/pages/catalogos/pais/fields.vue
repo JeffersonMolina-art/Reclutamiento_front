@@ -15,7 +15,7 @@ const isFormValid = ref(false)
 const refForm = ref<VForm>()
 const emit = defineEmits<Emit>()
 const data = ref<PaisInterface>(
-  { codigo: null,
+  {
 nombre: null,
 nacionalidad: null,
 estado: null }

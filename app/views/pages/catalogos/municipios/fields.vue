@@ -15,7 +15,7 @@ const isFormValid = ref(false)
 const refForm = ref<VForm>()
 const emit = defineEmits<Emit>()
 const data = ref<MunicipioInterface>(
-  { codigo: null,
+  {
 nombre: null,
 estado: null,
 departamento_id: null,
@@ -42,15 +42,6 @@ if (props.item)
     @submit.prevent="onSubmit"
   >
     <VRow>
-    
-    <VCol cols="12" md="6">
-      <AppTextField
-        v-model="data.codigo"
-        :rules="[requiredValidator]"
-        label="Codigo"
-        placeholder="Ingrese Codigo"
-      />
-    </VCol>
   
     <VCol cols="12" md="6">
       <AppTextField
@@ -71,11 +62,14 @@ if (props.item)
     </VCol>
   
     <VCol cols="12" md="6">
-      <AppTextField
-        v-model="data.departamento_id"
-        :rules="[requiredValidator]"
+      <SelectorPro
+        v-model:item-selected="data.departamento_id"
+        url="api/catalogo/departamentos"
+        item-value="id"
+        item-title="nombre"
+        :campos-a-filtrar="['nombre']"
         label="Departamento"
-        placeholder="Ingrese Departamento"
+        placeholder="Seleccione Departamento"
       />
     </VCol>
   

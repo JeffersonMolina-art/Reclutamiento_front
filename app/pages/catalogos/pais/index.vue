@@ -16,10 +16,6 @@ const { paginaEspera } = useCargandoPagina()
 
 const headers = [
   {
-    title: 'Codigo',
-    key: 'codigo',
-  },
-  {
     title: 'Nombre',
     key: 'nombre',
   },

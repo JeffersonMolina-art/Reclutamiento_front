@@ -21,7 +21,7 @@ const headers = [
   },
   {
     title: 'Bandeja',
-    key: 'bandeja_id',
+    key: 'nombre_bandeja',
   },
   {
     title: 'Codigo',

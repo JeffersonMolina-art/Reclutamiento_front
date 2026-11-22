@@ -16,10 +16,6 @@ const { paginaEspera } = useCargandoPagina()
 
 const headers = [
   {
-    title: 'Codigo',
-    key: 'codigo',
-  },
-  {
     title: 'Nombre',
     key: 'nombre',
   },
@@ -29,7 +25,7 @@ const headers = [
   },
   {
     title: 'Departamento',
-    key: 'departamento_id',
+    key: 'nombre_departamento',
   },
   {
     title: 'Existe Agencia',

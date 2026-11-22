@@ -24,10 +24,6 @@ const headers = [
     key: 'nombre',
   },
   {
-    title: 'Emails',
-    key: 'emails',
-  },
-  {
     title: 'Estado',
     key: 'estado',
   },
@@ -38,22 +34,6 @@ const headers = [
   {
     title: 'Gerencia',
     key: 'nombre_gerencia',
-  },
-  {
-    title: 'Jefe',
-    key: 'jefe_id',
-  },
-  {
-    title: 'Auxiliar',
-    key: 'auxiliar_id',
-  },
-  {
-    title: 'Municipio',
-    key: 'nombre_municipio',
-  },
-  {
-    title: 'Departamento',
-    key: 'nombre_departamento',
   },
   {
     title: 'Acciones',

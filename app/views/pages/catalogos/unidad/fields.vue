@@ -17,16 +17,10 @@ const emit = defineEmits<Emit>()
 const data = ref<UnidadInterface>(
   { codigo: null,
 nombre: null,
-emails: null,
 estado: null,
 regiones_id: null,
 gerencia_id: null,
-jefe_id: null,
-auxiliar_id: null,
-municipio_id: null,
-departamento_id: null,
-latitud: null,
-longitud: null }
+}
 )
 
 const onSubmit = () => {
@@ -70,15 +64,6 @@ if (props.item)
   
     <VCol cols="12" md="6">
       <AppTextField
-        v-model="data.emails"
-        :rules="[requiredValidator]"
-        label="Emails"
-        placeholder="Ingrese Emails"
-      />
-    </VCol>
-  
-    <VCol cols="12" md="6">
-      <AppTextField
         v-model="data.estado"
         :rules="[requiredValidator]"
         label="Estado"
@@ -87,74 +72,28 @@ if (props.item)
     </VCol>
   
     <VCol cols="12" md="6">
-      <AppTextField
-        v-model="data.regiones_id"
-        :rules="[requiredValidator]"
+      <SelectorPro
+        v-model:item-selected="data.regiones_id"
+        url="api/catalogo/regiones"
+        item-value="id"
+        item-title="nombre"
+        :campos-a-filtrar="['nombre']"
         label="Regiones"
-        placeholder="Ingrese Regiones"
+        placeholder="Seleccione Regiones"
+        persistent-placeholder
       />
     </VCol>
   
     <VCol cols="12" md="6">
-      <AppTextField
-        v-model="data.gerencia_id"
-        :rules="[requiredValidator]"
+      <SelectorPro
+        v-model:item-selected="data.gerencia_id"
+        url="api/catalogo/gerencias"
+        item-value="id"
+        item-title="nombre"
+        :campos-a-filtrar="['nombre']"
         label="Gerencia"
-        placeholder="Ingrese Gerencia"
-      />
-    </VCol>
-  
-    <VCol cols="12" md="6">
-      <AppTextField
-        v-model="data.jefe_id"
-        :rules="[requiredValidator]"
-        label="Jefe"
-        placeholder="Ingrese Jefe"
-      />
-    </VCol>
-  
-    <VCol cols="12" md="6">
-      <AppTextField
-        v-model="data.auxiliar_id"
-        :rules="[requiredValidator]"
-        label="Auxiliar"
-        placeholder="Ingrese Auxiliar"
-      />
-    </VCol>
-  
-    <VCol cols="12" md="6">
-      <AppTextField
-        v-model="data.municipio_id"
-        :rules="[requiredValidator]"
-        label="Municipio"
-        placeholder="Ingrese Municipio"
-      />
-    </VCol>
-  
-    <VCol cols="12" md="6">
-      <AppTextField
-        v-model="data.departamento_id"
-        :rules="[requiredValidator]"
-        label="Departamento"
-        placeholder="Ingrese Departamento"
-      />
-    </VCol>
-  
-    <VCol cols="12" md="6">
-      <AppTextField
-        v-model="data.latitud"
-        :rules="[requiredValidator]"
-        label="Latitud"
-        placeholder="Ingrese Latitud"
-      />
-    </VCol>
-  
-    <VCol cols="12" md="6">
-      <AppTextField
-        v-model="data.longitud"
-        :rules="[requiredValidator]"
-        label="Longitud"
-        placeholder="Ingrese Longitud"
+        placeholder="Seleccione Gerencia"
+        persistent-placeholder
       />
     </VCol>
   

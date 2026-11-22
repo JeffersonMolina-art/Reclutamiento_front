@@ -71,7 +71,7 @@ getPostulacionEstado()
         <h6 class="text-h6">
           Bandeja:
           <div class="d-inline-block text-capitalize text-body-1">
-            {{ item.bandeja_id }}
+            {{ item.nombre_bandeja }}
           </div>
         </h6>
       </VListItemTitle>
