@@ -17,6 +17,12 @@ export interface PostulacionCandidatoInterface {
   estado: string | null
   estado_codigo: string | null
   fecha_postulacion: string | null
+  entrevista?: {
+    fecha_hora: string | null
+    modalidad: string | null
+    url?: string | null
+    ubicacion?: string | null
+  } | null
 }
 
 interface RespuestaLoginCandidato {

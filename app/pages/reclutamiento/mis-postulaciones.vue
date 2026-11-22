@@ -42,6 +42,14 @@ const coloresEstado: Record<string, string> = {
 
 const fechaVisible = (fecha: string | null) => fecha ? formatoFecha.format(new Date(fecha)) : ''
 
+const formatoFechaHora = new Intl.DateTimeFormat('es-GT', {
+  dateStyle: 'full',
+  timeStyle: 'short',
+  timeZone: 'America/Guatemala',
+})
+
+const fechaHoraVisible = (fecha: string | null | undefined) => fecha ? formatoFechaHora.format(new Date(fecha)) : ''
+
 async function cargar() {
   cargando.value = true
   errorCarga.value = ''
@@ -147,6 +155,30 @@ onMounted(() => {
           </div>
 
           <PostulacionProgresoCandidato :codigo-estado="postulacion.estado_codigo" />
+
+          <VAlert
+            v-if="postulacion.estado_codigo === 'entrevista' && postulacion.entrevista"
+            class="w-100"
+            color="primary"
+            variant="tonal"
+            icon="tabler-calendar-event"
+            title="Tu entrevista"
+          >
+            <div class="text-capitalize">
+              {{ fechaHoraVisible(postulacion.entrevista.fecha_hora) }}
+            </div>
+            <div v-if="postulacion.entrevista.url">
+              Enlace:
+              <a
+                :href="postulacion.entrevista.url"
+                target="_blank"
+                rel="noopener noreferrer"
+              >{{ postulacion.entrevista.url }}</a>
+            </div>
+            <div v-else-if="postulacion.entrevista.ubicacion">
+              Ubicación: {{ postulacion.entrevista.ubicacion }}
+            </div>
+          </VAlert>
         </VCard>
       </div>
 

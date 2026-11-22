@@ -54,6 +54,14 @@ export class Archivo {
     ].includes(this.tipo)
   }
 
+  esExcel(): boolean {
+    return [
+      'application/vnd.ms-excel', // .xls
+      'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', // .xlsx
+      'application/vnd.ms-excel.sheet.macroEnabled.12', // .xlsm
+    ].includes(this.tipo)
+  }
+
   async generarPreview(): Promise<void> {
     if (this.remoto) {
       this.urlPrevisualizacion = this.url
