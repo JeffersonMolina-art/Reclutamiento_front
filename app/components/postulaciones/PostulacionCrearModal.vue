@@ -8,7 +8,7 @@ const emit = defineEmits<{
 }>()
 
 const { post } = useClienteRequest()
-const { showToastSuccess } = useToast()
+const { showToastSuccess, showToastError } = useToast()
 
 const abierto = computed({
   get: () => props.modelValue,
@@ -19,6 +19,9 @@ const refFormulario = ref()
 const guardando = ref(false)
 const vacanteId = ref<number | null>(null)
 const candidatoCreadoId = ref<number | null>(null)
+const cvSubido = ref(false)
+const archivoCv = ref<File[]>([])
+const refCurriculum = ref()
 const panelesAbiertos = ref<string[]>(['datos'])
 
 const crearCandidatoVacio = () => ({
@@ -49,6 +52,9 @@ watch(abierto, valor => {
 
   vacanteId.value = null
   candidatoCreadoId.value = null
+  cvSubido.value = false
+  archivoCv.value = []
+  refCurriculum.value?.reiniciar()
   panelesAbiertos.value = ['datos']
   candidatoNuevo.value = crearCandidatoVacio()
   conocimientos.value = [crearConocimiento()]
@@ -105,9 +111,13 @@ async function guardar() {
     return
 
   const resultado = await refFormulario.value?.validate()
+  const sinCv = !cvSubido.value && !(archivoCv.value[0] instanceof File)
 
-  if (!resultado?.valid) {
-    panelesAbiertos.value = ['datos', 'conocimientos', 'experiencias', 'formaciones']
+  if (!resultado?.valid || sinCv) {
+    panelesAbiertos.value = ['datos', 'conocimientos', 'experiencias', 'formaciones', 'curriculum']
+
+    if (sinCv)
+      showToastError('Adjunta el currículum del candidato.')
 
     return
   }
@@ -116,6 +126,14 @@ async function guardar() {
 
   try {
     const candidatoId = await obtenerIdDelCandidato()
+
+    if (!cvSubido.value) {
+      const cuerpo = new FormData()
+
+      cuerpo.append('cv', archivoCv.value[0] as File)
+      await post(`api/reclutamiento/candidatos/${candidatoId}/cv`, cuerpo)
+      cvSubido.value = true
+    }
 
     await post<SendResponseInterface<unknown>>('api/reclutamiento/postulaciones', {
       vacante_id: vacanteId.value,
@@ -179,6 +197,10 @@ async function guardar() {
         <PostulacionCandidatoConocimientos v-model="conocimientos" />
         <PostulacionCandidatoExperiencias v-model="experiencias" />
         <PostulacionCandidatoFormaciones v-model="formaciones" />
+        <PostulacionCandidatoCurriculum
+          ref="refCurriculum"
+          v-model="archivoCv"
+        />
       </VExpansionPanels>
 
       <VDivider class="my-4" />
