@@ -19,6 +19,7 @@ const refFormulario = ref()
 const guardando = ref(false)
 const vacanteId = ref<number | null>(null)
 const candidatoCreadoId = ref<number | null>(null)
+const panelesAbiertos = ref<string[]>(['datos'])
 
 const crearCandidatoVacio = () => ({
   primer_nombre: '',
@@ -33,46 +34,14 @@ const crearCandidatoVacio = () => ({
   expectativa_salarial: '' as number | string,
 })
 
-const candidatoNuevo = reactive(crearCandidatoVacio())
+const crearConocimiento = () => ({ descripcion: '', nivel: '' })
+const crearExperiencia = () => ({ empresa: '', puesto: '', fecha_inicio: '', fecha_fin: '' })
+const crearFormacion = () => ({ nombre: '', titulo_carrera: '', fecha_inicio: '', fecha_fin: '' })
 
-const fechaMaximaNacimiento = computed(() => {
-  const fecha = new Date()
-
-  fecha.setFullYear(fecha.getFullYear() - 18)
-
-  return fecha.toLocaleDateString('en-CA')
-})
-
-const reglaNombre = (obligatorio: boolean) => (valor: string) => {
-  const texto = (valor ?? '').trim()
-
-  if (!texto)
-    return obligatorio ? 'Este campo es obligatorio.' : true
-
-  return /^[\p{L} .'-]{2,45}$/u.test(texto) || 'Usa de 2 a 45 letras, espacios, punto, apóstrofe o guion.'
-}
-
-const reglaDpi = (valor: string) =>
-  /^\d{13}$/.test((valor ?? '').replace(/\s/g, '')) || 'El DPI debe tener exactamente 13 dígitos.'
-
-const reglaCorreo = (valor: string) => {
-  const texto = (valor ?? '').trim()
-
-  return (/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(texto) && texto.length <= 100) || 'Ingresa un correo válido.'
-}
-
-const reglaTelefono = (valor: string) =>
-  /^\+?\d{8,11}$/.test((valor ?? '').replace(/[\s-]/g, '')) || 'El teléfono debe tener de 8 a 11 dígitos.'
-
-const reglaFechaNacimiento = (valor: string) => {
-  if (!valor)
-    return 'Este campo es obligatorio.'
-
-  return valor <= fechaMaximaNacimiento.value || 'El candidato debe ser mayor de 18 años.'
-}
-
-const reglaSalario = (valor: number | string) =>
-  valor === '' || valor === null || Number(valor) >= 0 || 'Ingresa un monto mayor o igual a cero.'
+const candidatoNuevo = ref(crearCandidatoVacio())
+const conocimientos = ref([crearConocimiento()])
+const experiencias = ref([crearExperiencia()])
+const formaciones = ref([crearFormacion()])
 
 watch(abierto, valor => {
   if (!valor)
@@ -80,29 +49,39 @@ watch(abierto, valor => {
 
   vacanteId.value = null
   candidatoCreadoId.value = null
-  Object.assign(candidatoNuevo, crearCandidatoVacio())
+  panelesAbiertos.value = ['datos']
+  candidatoNuevo.value = crearCandidatoVacio()
+  conocimientos.value = [crearConocimiento()]
+  experiencias.value = [crearExperiencia()]
+  formaciones.value = [crearFormacion()]
   refFormulario.value?.resetValidation()
 })
 
+const limpiarOpcionales = <T extends Record<string, string>>(item: T) =>
+  Object.fromEntries(Object.entries(item).map(([clave, valor]) => [clave, valor.trim()]).filter(([, valor]) => valor))
+
 function armarPayloadCandidato() {
+  const candidato = candidatoNuevo.value
+
   const payload: Record<string, any> = {
-    primer_nombre: candidatoNuevo.primer_nombre.trim(),
-    primer_apellido: candidatoNuevo.primer_apellido.trim(),
-    dpi: candidatoNuevo.dpi.replace(/\s/g, ''),
-    email: candidatoNuevo.email.trim().toLowerCase(),
-    telefono: candidatoNuevo.telefono.replace(/[\s-]/g, ''),
-    fecha_nacimiento: candidatoNuevo.fecha_nacimiento,
+    primer_nombre: candidato.primer_nombre.trim(),
+    primer_apellido: candidato.primer_apellido.trim(),
+    dpi: candidato.dpi.replace(/\s/g, ''),
+    email: candidato.email.trim().toLowerCase(),
+    telefono: candidato.telefono.replace(/[\s-]/g, ''),
+    fecha_nacimiento: candidato.fecha_nacimiento,
+    expectativa_salarial: Number(candidato.expectativa_salarial),
+    conocimientos: conocimientos.value.map(limpiarOpcionales),
+    experiencias: experiencias.value.map(limpiarOpcionales),
+    formaciones: formaciones.value.map(limpiarOpcionales),
   }
 
   for (const campo of ['segundo_nombre', 'tercer_nombre', 'segundo_apellido'] as const) {
-    const valor = candidatoNuevo[campo].trim()
+    const valor = candidato[campo].trim()
 
     if (valor)
       payload[campo] = valor
   }
-
-  if (candidatoNuevo.expectativa_salarial !== '' && candidatoNuevo.expectativa_salarial !== null)
-    payload.expectativa_salarial = Number(candidatoNuevo.expectativa_salarial)
 
   return payload
 }
@@ -127,8 +106,11 @@ async function guardar() {
 
   const resultado = await refFormulario.value?.validate()
 
-  if (!resultado?.valid)
+  if (!resultado?.valid) {
+    panelesAbiertos.value = ['datos', 'conocimientos', 'experiencias', 'formaciones']
+
     return
+  }
 
   guardando.value = true
 
@@ -154,187 +136,71 @@ async function guardar() {
 </script>
 
 <template>
-  <VDialog
-    v-model="abierto"
-    max-width="720"
+  <ModalBasico
+    v-model:mostrar-modal="abierto"
+    titulo="Nueva postulación"
+    max-width="820"
     :persistent="guardando"
   >
-    <VCard title="Nueva postulación">
-      <VForm
-        ref="refFormulario"
-        :readonly="!!candidatoCreadoId"
-        @submit.prevent="guardar"
+    <VForm
+      ref="refFormulario"
+      :readonly="!!candidatoCreadoId"
+      @submit.prevent="guardar"
+    >
+      <div class="mb-4">
+        <VLabel class="mb-2">
+          Vacante
+        </VLabel>
+        <SelectorPro
+          v-model:item-selected="vacanteId"
+          url="api/reclutamiento/vacantes"
+          item-value="id"
+          item-title="nombre"
+          :campos-a-filtrar="['nombre']"
+        />
+      </div>
+
+      <VAlert
+        v-if="candidatoCreadoId"
+        type="info"
+        variant="tonal"
+        density="compact"
+        class="mb-4"
       >
-        <VCardText class="d-flex flex-column gap-5">
-          <div>
-            <VLabel class="mb-2">
-              Vacante
-            </VLabel>
-            <SelectorPro
-              v-model:item-selected="vacanteId"
-              url="api/reclutamiento/vacantes"
-              item-value="id"
-              item-title="nombre"
-              :campos-a-filtrar="['nombre']"
-            />
-          </div>
+        El candidato ya fue creado. Al reintentar solo se creará la postulación.
+      </VAlert>
 
-          <div>
-            <div class="text-overline text-medium-emphasis mb-3">
-              Datos del candidato
-            </div>
+      <VExpansionPanels
+        v-model="panelesAbiertos"
+        multiple
+        variant="accordion"
+      >
+        <PostulacionCandidatoDatos v-model="candidatoNuevo" />
+        <PostulacionCandidatoConocimientos v-model="conocimientos" />
+        <PostulacionCandidatoExperiencias v-model="experiencias" />
+        <PostulacionCandidatoFormaciones v-model="formaciones" />
+      </VExpansionPanels>
 
-            <VAlert
-              v-if="candidatoCreadoId"
-              type="info"
-              variant="tonal"
-              density="compact"
-              class="mb-4"
-            >
-              El candidato ya fue creado. Al reintentar solo se creará la postulación.
-            </VAlert>
+      <VDivider class="my-4" />
 
-            <VRow>
-              <VCol
-                cols="12"
-                sm="4"
-              >
-                <AppTextField
-                  v-model="candidatoNuevo.primer_nombre"
-                  label="Primer nombre"
-                  maxlength="45"
-                  :rules="[reglaNombre(true)]"
-                />
-              </VCol>
-              <VCol
-                cols="12"
-                sm="4"
-              >
-                <AppTextField
-                  v-model="candidatoNuevo.segundo_nombre"
-                  label="Segundo nombre"
-                  maxlength="45"
-                  :rules="[reglaNombre(false)]"
-                />
-              </VCol>
-              <VCol
-                cols="12"
-                sm="4"
-              >
-                <AppTextField
-                  v-model="candidatoNuevo.tercer_nombre"
-                  label="Tercer nombre"
-                  maxlength="45"
-                  :rules="[reglaNombre(false)]"
-                />
-              </VCol>
-
-              <VCol
-                cols="12"
-                sm="6"
-              >
-                <AppTextField
-                  v-model="candidatoNuevo.primer_apellido"
-                  label="Primer apellido"
-                  maxlength="45"
-                  :rules="[reglaNombre(true)]"
-                />
-              </VCol>
-              <VCol
-                cols="12"
-                sm="6"
-              >
-                <AppTextField
-                  v-model="candidatoNuevo.segundo_apellido"
-                  label="Segundo apellido"
-                  maxlength="45"
-                  :rules="[reglaNombre(false)]"
-                />
-              </VCol>
-
-              <VCol
-                cols="12"
-                sm="6"
-              >
-                <AppTextField
-                  v-model="candidatoNuevo.dpi"
-                  label="DPI"
-                  maxlength="17"
-                  :rules="[reglaDpi]"
-                />
-              </VCol>
-              <VCol
-                cols="12"
-                sm="6"
-              >
-                <AppTextField
-                  v-model="candidatoNuevo.fecha_nacimiento"
-                  label="Fecha de nacimiento"
-                  type="date"
-                  :max="fechaMaximaNacimiento"
-                  :rules="[reglaFechaNacimiento]"
-                />
-              </VCol>
-
-              <VCol
-                cols="12"
-                sm="6"
-              >
-                <AppTextField
-                  v-model="candidatoNuevo.email"
-                  label="Correo electrónico"
-                  type="email"
-                  maxlength="100"
-                  :rules="[reglaCorreo]"
-                />
-              </VCol>
-              <VCol
-                cols="12"
-                sm="6"
-              >
-                <AppTextField
-                  v-model="candidatoNuevo.telefono"
-                  label="Teléfono"
-                  maxlength="14"
-                  :rules="[reglaTelefono]"
-                />
-              </VCol>
-
-              <VCol cols="12">
-                <AppTextField
-                  v-model="candidatoNuevo.expectativa_salarial"
-                  label="Expectativa salarial (Q) — opcional"
-                  type="number"
-                  min="0"
-                  step="0.01"
-                  :rules="[reglaSalario]"
-                />
-              </VCol>
-            </VRow>
-          </div>
-        </VCardText>
-
-        <VDivider />
-
-        <VCardActions class="justify-end pa-4 ga-2">
-          <VBtn
-            variant="text"
-            :disabled="guardando"
-            @click="abierto = false"
-          >
-            Cancelar
-          </VBtn>
-          <VBtn
-            type="submit"
-            color="primary"
-            variant="elevated"
-            :loading="guardando"
-            :disabled="!vacanteId"
-          >
-            Guardar
-          </VBtn>
-        </VCardActions>
-      </VForm>
-    </VCard>
-  </VDialog>
+      <div class="d-flex justify-end ga-2">
+        <VBtn
+          variant="text"
+          :disabled="guardando"
+          @click="abierto = false"
+        >
+          Cancelar
+        </VBtn>
+        <VBtn
+          type="submit"
+          color="primary"
+          variant="elevated"
+          :loading="guardando"
+          :disabled="!vacanteId"
+        >
+          Guardar
+        </VBtn>
+      </div>
+    </VForm>
+  </ModalBasico>
 </template>

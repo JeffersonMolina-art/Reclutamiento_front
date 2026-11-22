@@ -273,21 +273,6 @@ watch(form, () => {
                 >
                   Iniciar Sesión
                 </VBtn>
-
-                <VBtn
-                  block
-                  class="mt-2"
-                  color="info"
-                  variant="outlined"
-                  @click="loginWithMicrosoft"
-                >
-                  <VIcon
-                    class="tabler-brand-windows"
-                    color="info"
-                    size="20"
-                  />
-                  Inicia sesión con AC
-                </VBtn>
               </VCol>
             </VRow>
           </VForm>
