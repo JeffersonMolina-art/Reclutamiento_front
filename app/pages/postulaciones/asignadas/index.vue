@@ -21,6 +21,7 @@ const dataTable = ref<InstanceType<typeof DataTable> | null>(null)
 const estadoId = ref<number | null>(null)
 const ESTADO_RECIBIDA_ID = 1
 const ESTADO_EN_REVISION_ID = 2
+const ESTADO_ENTREVISTA_ID = 3
 const columnas = computed(() => [
   { title: 'ID', key: 'id' },
   { title: 'Vacante', key: 'vacante', sortable: false },
@@ -72,6 +73,10 @@ async function limpiarFiltros() {
 function estadoRecibida(postulacion: { estado_id?: number | null }) {
   return postulacion.estado_id === ESTADO_RECIBIDA_ID
     && can('recibida postulaciones', 'Postulacion')
+}
+function estadoEntrevista(postulacion: { estado_id?: number | null }) {
+  return postulacion.estado_id === ESTADO_ENTREVISTA_ID
+    && can('entrevista postulaciones', 'Postulacion')
 }
 function estadoEnRevision(postulacion: { estado_id?: number | null }) {
   return postulacion.estado_id === ESTADO_EN_REVISION_ID
@@ -161,6 +166,16 @@ function estadoEnRevision(postulacion: { estado_id?: number | null }) {
         prepend-icon="tabler-clipboard-list"
       >
         Seguimiento
+      </VBtn>
+      <VBtn
+        v-if="estadoEntrevista(item)"
+        :to="`/postulaciones/asignadas/${item.id}/entrevista`"
+        color="primary"
+        variant="tonal"
+        size="small"
+        prepend-icon="tabler-calendar-event"
+      >
+        Gestionar entrevista
       </VBtn>
     </template>
   </DataTableComponent>
