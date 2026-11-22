@@ -18,6 +18,7 @@ const headers = [
   { title: 'Vacante', key: 'nombre' },
   { title: 'Estado', key: 'estado_nombre', sortable: false },
   { title: 'Sede', key: 'sede_nombre', sortable: false },
+  { title: 'Unidad', key: 'unidad_nombre', sortable: false },
   { title: 'Encargado', key: 'encargado_nombre', sortable: false },
   { title: 'Plazas', key: 'cantidad_plazas', align: 'center' as const },
   { title: 'Rango salarial', key: 'rango_salarial', sortable: false },

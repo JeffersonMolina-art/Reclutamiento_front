@@ -16,6 +16,7 @@ const crearFormulario = (): VacanteInterface => ({
   estado_id: null,
   puesto_id: null,
   sede_id: null,
+  unidad_id: null,
   nombre: null,
   descripcion: null,
   cantidad_plazas: null,
@@ -144,6 +145,20 @@ async function onSubmit() {
           :rules="[requiredValidator]"
           label="Sede o ubicación"
           placeholder="Busca una sede"
+          persistent-placeholder
+        />
+      </VCol>
+
+      <VCol cols="12" md="4">
+        <SelectorPro
+          v-model:item-selected="data.unidad_id"
+          url="/api/catalogo/unidades"
+          item-value="id"
+          item-title="nombre"
+          :campos-a-filtrar="['nombre']"
+          :rules="[requiredValidator]"
+          label="Unidad"
+          placeholder="Busca una unidad"
           persistent-placeholder
         />
       </VCol>

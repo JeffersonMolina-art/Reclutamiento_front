@@ -19,6 +19,7 @@ const id = route.params.id
 const itemVacante = ref<VacanteInterface>({
   estado_id: null,
   puesto_id: null,
+  unidad_id: null,
   sede_id: null,
   nombre: null,
   descripcion: null,

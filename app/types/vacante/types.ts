@@ -2,6 +2,7 @@ export interface VacanteInterface {
   estado_id: number
   puesto_id: number
   sede_id: number
+  unidad_id: number
   nombre: string
   descripcion: string
   cantidad_plazas: number

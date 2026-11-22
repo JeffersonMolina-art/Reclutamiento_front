@@ -239,6 +239,10 @@ onMounted(getVacante)
                 <dd>{{ vacante.sede_nombre || vacante.sede?.nombre || 'Sin definir' }}</dd>
               </div>
               <div>
+                <dt>Unidad</dt>
+                <dd>{{ vacante.unidad_nombre || vacante.unidad?.nombre || 'Sin definir' }}</dd>
+              </div>
+              <div>
                 <dt>Modalidad</dt>
                 <dd>{{ modalidades[vacante.modalidad_trabajo ?? ''] || vacante.modalidad_trabajo || 'Sin definir' }}</dd>
               </div>
