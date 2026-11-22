@@ -33,10 +33,11 @@ interface PostulacionDetalle {
   } | null
   estado?: { codigo: string } | null
   entrevistas?: Entrevista[]
+  estados_disponibles?: { id: number; codigo: string; nombre: string }[]
 }
 
 const route = useRoute()
-const { get, post } = useClienteRequest()
+const { get, post, put } = useClienteRequest()
 const { showToastSuccess } = useToast()
 
 const endpoint = computed(() =>
@@ -68,6 +69,53 @@ const puedeAgendar = computed(() =>
   postulacion.value?.estado?.codigo === 'entrevista'
   && can('editar postulaciones', 'Postulacion'),
 )
+
+const dialogVeredicto = ref(false)
+const guardandoVeredicto = ref(false)
+const veredicto = reactive<{ estado_id: number | null; comentario: string; puntaje_fase: number | string | null }>({
+  estado_id: null,
+  comentario: '',
+  puntaje_fase: null,
+})
+
+const puedeCambiarPaso = computed(() =>
+  entrevistas.value.length > 0
+  && (postulacion.value?.estados_disponibles?.length ?? 0) > 0
+  && can('editar postulaciones', 'Postulacion'),
+)
+
+function abrirVeredicto() {
+  Object.assign(veredicto, { estado_id: null, comentario: '', puntaje_fase: null })
+  dialogVeredicto.value = true
+}
+
+async function darVeredicto() {
+  if (!veredicto.estado_id || !veredicto.comentario.trim() || guardandoVeredicto.value)
+    return
+
+  guardandoVeredicto.value = true
+
+  try {
+    const payload: Record<string, any> = {
+      estado_id: veredicto.estado_id,
+      comentario: veredicto.comentario.trim(),
+    }
+
+    if (veredicto.puntaje_fase !== null && veredicto.puntaje_fase !== '')
+      payload.puntaje_fase = Number(veredicto.puntaje_fase)
+
+    await put(endpoint.value, payload)
+    showToastSuccess('Veredicto registrado')
+    dialogVeredicto.value = false
+    await navigateTo('/postulaciones/asignadas')
+  }
+  catch (error) {
+    manejaError(error)
+  }
+  finally {
+    guardandoVeredicto.value = false
+  }
+}
 
 const esVirtual = computed(() => formulario.modalidad === 'virtual')
 
@@ -244,6 +292,15 @@ onMounted(cargarPostulacion)
           >
             Agendar entrevista
           </VBtn>
+
+          <VBtn
+            v-if="puedeCambiarPaso"
+            color="success"
+            prepend-icon="tabler-checks"
+            @click="abrirVeredicto"
+          >
+            Dar veredicto
+          </VBtn>
         </VCardText>
       </VCard>
 
@@ -333,6 +390,53 @@ onMounted(cargarPostulacion)
           </VCard>
         </VCol>
       </VRow>
+
+      <VDialog v-model="dialogVeredicto" :persistent="guardandoVeredicto" max-width="500">
+        <VCard title="Dar veredicto">
+          <VCardText>
+            <VRow>
+              <VCol cols="12">
+                <AppSelect
+                  v-model="veredicto.estado_id"
+                  label="Siguiente paso"
+                  :items="postulacion.estados_disponibles"
+                  item-title="nombre"
+                  item-value="id"
+                />
+              </VCol>
+              <VCol cols="6">
+                <AppTextField
+                  v-model="veredicto.puntaje_fase"
+                  label="Puntaje de esta fase"
+                  type="number"
+                />
+              </VCol>
+              <VCol cols="12">
+                <AppTextarea
+                  v-model="veredicto.comentario"
+                  label="Comentario"
+                  maxlength="255"
+                  rows="3"
+                />
+              </VCol>
+            </VRow>
+          </VCardText>
+          <VCardActions>
+            <VSpacer />
+            <VBtn variant="text" @click="dialogVeredicto = false">
+              Cancelar
+            </VBtn>
+            <VBtn
+              color="success"
+              :loading="guardandoVeredicto"
+              :disabled="!veredicto.estado_id || !veredicto.comentario.trim()"
+              @click="darVeredicto"
+            >
+              Confirmar
+            </VBtn>
+          </VCardActions>
+        </VCard>
+      </VDialog>
 
       <VDialog v-model="dialogAgendar" :persistent="guardando" max-width="640">
         <VCard>
