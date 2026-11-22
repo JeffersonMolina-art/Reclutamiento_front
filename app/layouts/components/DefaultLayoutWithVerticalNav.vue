@@ -62,6 +62,6 @@ const navItems = useState('menu')
     </template>
 
     <!-- 👉 Customizer -->
-    <TheCustomizer v-if="can('ver preferencias', 'UserPreferencia')"/>
+    <TheCustomizer v-if="can('ver preferencias', 'preferencias')"/>
   </VerticalNavLayout>
 </template>

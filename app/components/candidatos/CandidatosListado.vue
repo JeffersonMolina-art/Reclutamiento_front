@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import type DataTable from '@/components/DataTableComponent.vue'
+import type DataTable from '@/components/form-elements/DataTableComponent.vue'
 import { MODEL_TYPE_CANDIDATO } from '@/constantes/ModelTypes'
 
 const dataTable = ref<InstanceType<typeof DataTable> | null>(null)

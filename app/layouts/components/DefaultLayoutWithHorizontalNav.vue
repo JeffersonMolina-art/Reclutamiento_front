@@ -52,6 +52,6 @@ import {can} from "@layouts/plugins/casl";
     </template>
 
     <!-- 👉 Customizer -->
-    <TheCustomizer v-if="can('ver preferencias', 'UserPreferencia')"/>
+    <TheCustomizer v-if="can('ver preferencias', 'preferencias')"/>
   </HorizontalNavLayout>
 </template>
