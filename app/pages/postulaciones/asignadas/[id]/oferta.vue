@@ -12,10 +12,7 @@ definePageMeta({
 const route = useRoute()
 const { get } = useClienteRequest()
 
-const urlBasePostulacion = computed(() =>
-  `api/reclutamiento/postulaciones/${encodeURIComponent(String(route.params.id))}`,
-)
-
+const postulacionId = route.params.id
 const detallePostulacion = ref<PostulacionDetalle | null>(null)
 const ofertaEnviada = ref<OfertaEnviada | null>(null)
 const cargandoInformacion = ref(true)
@@ -31,8 +28,8 @@ async function cargarInformacion() {
 
   try {
     const [respuestaPostulacion, respuestaOferta] = await Promise.all([
-      get<SendResponseInterface<PostulacionDetalle>>(urlBasePostulacion.value),
-      get<SendResponseInterface<OfertaEnviada | null>>(`${urlBasePostulacion.value}/oferta`),
+      get<SendResponseInterface<PostulacionDetalle>>(`api/reclutamiento/postulaciones/${postulacionId}`),
+      get<SendResponseInterface<OfertaEnviada | null>>(`api/reclutamiento/postulaciones/${postulacionId}/oferta`),
     ])
 
     detallePostulacion.value = respuestaPostulacion.data
@@ -125,7 +122,7 @@ onMounted(cargarInformacion)
 
       <OfertaFormulario
         v-else-if="puedeEnviarOferta"
-        :url-oferta="`${urlBasePostulacion}/oferta`"
+        :url-oferta="`api/reclutamiento/postulaciones/${postulacionId}/oferta`"
         :vacante="detallePostulacion.vacante"
         :candidato="detallePostulacion.candidato"
         @enviada="ofertaEnviada = $event"

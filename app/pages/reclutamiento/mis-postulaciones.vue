@@ -118,10 +118,6 @@ onMounted(() => {
                 <VIcon icon="tabler-map-pin" size="16" aria-hidden="true" />
                 {{ postulacion.sede }}
               </span>
-              <span v-if="postulacion.puesto && postulacion.puesto !== postulacion.vacante">
-                <VIcon icon="tabler-briefcase" size="16" aria-hidden="true" />
-                {{ postulacion.puesto }}
-              </span>
               <span>
                 <VIcon icon="tabler-calendar" size="16" aria-hidden="true" />
                 Postulado el {{ fechaVisible(postulacion.fecha_postulacion) }}

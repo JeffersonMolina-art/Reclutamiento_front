@@ -64,8 +64,8 @@ function formatearPeriodo(valor?: string | null): string {
 const inicialesCandidato = computed(() => {
   const c = candidato.value
   if (!c)
-    return 'C'
-  return `${c.primer_nombre?.[0] ?? ''}${c.primer_apellido?.[0] ?? ''}`.toUpperCase() || 'C'
+    return 'CA'
+  return `${c.primer_nombre?.[0] ?? ''}${c.primer_apellido?.[0] ?? ''}`.toUpperCase() || 'CA'
 })
 
 const idPostulacion = computed(() => (route.params as { id: string }).id)
