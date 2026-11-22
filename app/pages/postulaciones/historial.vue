@@ -38,7 +38,7 @@ const columnas = computed(() => [
   { title: 'Fecha de postulación', key: 'fecha_postulacion' },
   filtroOculto('buscar', buscar.value.trim()),
   filtroOculto('vacante_id', vacanteId.value),
-  filtroOculto('filtro_estado_id', estadoId.value),
+  filtroOculto('estado_id', estadoId.value),
   filtroOculto('fecha_desde', fechaDesde.value),
   filtroOculto('fecha_hasta', fechaHasta.value),
   { title: 'Acciones', key: 'acciones', sortable: false, exportable: false },

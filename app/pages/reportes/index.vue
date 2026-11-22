@@ -105,11 +105,8 @@ function limpiar() {
 
     <div>
       <h1 class="text-h4">
-        Reporte de postulaciones por estado
+        Reporte de postulaciones
       </h1>
-      <p class="text-body-2 text-medium-emphasis mb-0">
-        Análisis y seguimiento del proceso de contratación, agrupado por vacante.
-      </p>
     </div>
   </div>
 
@@ -130,7 +127,6 @@ function limpiar() {
         </VAvatar>
       </template>
       <VCardTitle>Filtros del reporte</VCardTitle>
-      <VCardSubtitle>Si no eliges ninguno, se incluyen todas las vacantes, estados y fechas.</VCardSubtitle>
     </VCardItem>
 
     <VDivider />
