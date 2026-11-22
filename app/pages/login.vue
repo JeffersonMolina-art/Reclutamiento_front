@@ -6,6 +6,7 @@ import authV2MaskLight from '@images/pages/misc-mask-light.png'
 import { VNodeRenderer } from '@layouts/components/VNodeRenderer'
 import { themeConfig } from '@themeConfig'
 import { autenticar } from '@/utils/auth/funciones'
+import { useTheme } from 'vuetify'
 
 const { post, get } = useClienteRequest()
 const route = useRoute();
@@ -38,15 +39,6 @@ const ObtenerFondo = async () => {
 }
 
 const isPasswordVisible = ref(false);
-
-const authThemeImg = useGenerateImageVariant(
-  FondoClaro,
-  FondoOscuro,
-  false
-).value
-
-
-console.log('authThemeImg:', authThemeImg.value);
 
 const authThemeMask = useGenerateImageVariant(authV2MaskLight, authV2MaskDark);
 
@@ -127,6 +119,15 @@ const loginWithMicrosoft = () => {
     window.location.href = "/api/microsoft/login";
   }
 };
+const tema = useTheme()
+
+const authThemeImg = computed(() => {
+  const fondoDelTema = tema.global.current.value.dark
+    ? FondoOscuro.value
+    : FondoClaro.value
+
+  return fondoDelTema || '/guayacan_logo.svg'
+})
 
 onMounted(() => {
    ObtenerFondo()

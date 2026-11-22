@@ -48,7 +48,7 @@ async function postularme(vacanteId: number) {
       return
     }
 
-    if (error?.data?.requiere_cv) {
+    if (error?.data?.requiere_cv || error?.data?.requiere_perfil) {
       showToastError(error.data.message)
       await navigateTo('/reclutamiento/perfil')
 

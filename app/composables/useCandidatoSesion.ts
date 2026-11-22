@@ -74,7 +74,7 @@ export const useCandidatoSesion = () => {
       return null
 
     try {
-      perfil.value = await peticion<PerfilCandidatoInterface>('/api/portal/me')
+      perfil.value = await peticion<PerfilCandidatoInterface>('/api/portal/informacioncandidato')
     }
     catch {
       token.value = null
