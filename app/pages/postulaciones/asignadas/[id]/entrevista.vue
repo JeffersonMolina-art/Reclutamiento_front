@@ -15,6 +15,8 @@ interface Entrevista {
   ubicacion_o_enlace: string
   tipo_entrevista: string
   observaciones?: string | null
+  resultado?: 'pendiente' | 'aprobado' | 'no_aprobado' | null
+  entrevistador?: { nombre_completo?: string | null } | null
   estado?: { nombre: string } | null
 }
 
@@ -56,9 +58,25 @@ const formulario = reactive({
   fecha_hora_programada: '',
   modalidad: 'presencial' as Entrevista['modalidad'],
   ubicacion_o_enlace: '',
-  tipo_entrevista: '',
+  tipo_entrevista: null as string | null,
+  entrevistador_id: null as number | null,
   observaciones: '',
 })
+
+const tiposEntrevista = [
+  { title: 'Técnica', value: 'tecnica' },
+  { title: 'Recursos humanos', value: 'recursos_humanos' },
+]
+
+const resultados: Record<string, { texto: string; color: string }> = {
+  pendiente: { texto: 'Pendiente', color: 'warning' },
+  aprobado: { texto: 'Aprobado', color: 'success' },
+  no_aprobado: { texto: 'No aprobado', color: 'error' },
+}
+
+const etiquetaTipo = (valor: string) => tiposEntrevista.find(t => t.value === valor)?.title ?? valor
+const resultadoDe = (e: Entrevista) => resultados[e.resultado ?? 'pendiente'] ?? resultados.pendiente
+const guardandoResultado = ref<number | null>(null)
 
 const modalidades = [
   { title: 'Presencial', value: 'presencial' },
@@ -209,7 +227,7 @@ async function agendarEntrevista() {
         ...formulario,
         fecha_hora_programada: formulario.fecha_hora_programada.replace('T', ' '),
         ubicacion_o_enlace: formulario.ubicacion_o_enlace.trim(),
-        tipo_entrevista: formulario.tipo_entrevista.trim(),
+        tipo_entrevista: formulario.tipo_entrevista,
         observaciones: formulario.observaciones.trim() || null,
       },
     )
@@ -218,7 +236,8 @@ async function agendarEntrevista() {
 
     formulario.fecha_hora_programada = ''
     formulario.ubicacion_o_enlace = ''
-    formulario.tipo_entrevista = ''
+    formulario.tipo_entrevista = null
+    formulario.entrevistador_id = null
     formulario.observaciones = ''
 
     showToastSuccess('Entrevista programada con éxito.')
@@ -229,6 +248,26 @@ async function agendarEntrevista() {
   }
   finally {
     guardando.value = false
+  }
+}
+
+async function registrarResultado(entrevista: Entrevista, resultado: 'aprobado' | 'no_aprobado') {
+  guardandoResultado.value = entrevista.id
+
+  try {
+    const respuesta = await post<SendResponseInterface<Entrevista>>(
+      `api/reclutamiento/entrevistas/${entrevista.id}/resultado`,
+      { resultado, observaciones: entrevista.observaciones || null },
+    )
+
+    Object.assign(entrevista, respuesta.data)
+    showToastSuccess('Resultado registrado con éxito.')
+  }
+  catch (error) {
+    manejaError(error)
+  }
+  finally {
+    guardandoResultado.value = null
   }
 }
 
@@ -340,17 +379,25 @@ onMounted(cargarPostulacion)
 
                   <div>
                     <h3 class="text-subtitle-1 font-weight-bold">
-                      {{ entrevista.tipo_entrevista }}
+                      {{ etiquetaTipo(entrevista.tipo_entrevista) }}
                     </h3>
                     <span class="text-body-2 text-medium-emphasis">
                       {{ entrevista.modalidad === 'virtual' ? 'Virtual' : 'Presencial' }}
+                      <template v-if="entrevista.entrevistador?.nombre_completo">
+                        · {{ entrevista.entrevistador.nombre_completo }}
+                      </template>
                     </span>
                   </div>
                 </div>
 
-                <VChip v-if="entrevista.estado" size="small" color="primary" variant="tonal" label>
-                  {{ entrevista.estado.nombre }}
-                </VChip>
+                <div class="d-flex ga-2">
+                  <VChip size="small" :color="resultadoDe(entrevista).color" variant="tonal" label>
+                    {{ resultadoDe(entrevista).texto }}
+                  </VChip>
+                  <VChip v-if="entrevista.estado" size="small" color="primary" variant="tonal" label>
+                    {{ entrevista.estado.nombre }}
+                  </VChip>
+                </div>
               </div>
 
               <div class="d-flex align-center ga-2 text-body-2 mb-2">
@@ -386,6 +433,32 @@ onMounted(cargarPostulacion)
               >
                 Unirse a Meet
               </VBtn>
+
+              <div
+                v-if="can('editar postulaciones', 'Postulacion') && entrevista.resultado === 'pendiente'"
+                class="d-flex ga-2 mt-4"
+              >
+                <VBtn
+                  color="success"
+                  size="small"
+                  variant="tonal"
+                  prepend-icon="tabler-check"
+                  :loading="guardandoResultado === entrevista.id"
+                  @click="registrarResultado(entrevista, 'aprobado')"
+                >
+                  Aprobado
+                </VBtn>
+                <VBtn
+                  color="error"
+                  size="small"
+                  variant="tonal"
+                  prepend-icon="tabler-x"
+                  :disabled="guardandoResultado === entrevista.id"
+                  @click="registrarResultado(entrevista, 'no_aprobado')"
+                >
+                  No aprobado
+                </VBtn>
+              </div>
             </VCardText>
           </VCard>
         </VCol>
@@ -489,12 +562,24 @@ onMounted(cargarPostulacion)
                   />
                 </VCol>
 
-                <VCol cols="12">
-                  <VTextField
+                <VCol cols="12" sm="6">
+                  <VSelect
                     v-model="formulario.tipo_entrevista"
+                    :items="tiposEntrevista"
                     label="Tipo de entrevista"
-                    maxlength="255"
                     required
+                  />
+                </VCol>
+
+                <VCol cols="12" sm="6">
+                  <SelectorPro
+                    v-model:item-selected="formulario.entrevistador_id"
+                    url="api/users"
+                    item-value="id"
+                    item-title="nombre_completo"
+                    :campos-a-filtrar="['buscarPorNombre']"
+                    label="Entrevistador (por defecto, tú)"
+                    clearable
                   />
                 </VCol>
 

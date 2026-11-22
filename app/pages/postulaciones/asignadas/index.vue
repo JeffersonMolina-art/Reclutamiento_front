@@ -22,6 +22,7 @@ const estadoId = ref<number | null>(null)
 const ESTADO_RECIBIDA_ID = 1
 const ESTADO_EN_REVISION_ID = 2
 const ESTADO_ENTREVISTA_ID = 3
+const ESTADO_OFERTA_ID = 4
 const columnas = computed(() => [
   { title: 'ID', key: 'id' },
   { title: 'Vacante', key: 'vacante', sortable: false },
@@ -77,6 +78,10 @@ function estadoRecibida(postulacion: { estado_id?: number | null }) {
 function estadoEntrevista(postulacion: { estado_id?: number | null }) {
   return postulacion.estado_id === ESTADO_ENTREVISTA_ID
     && can('entrevista postulaciones', 'Postulacion')
+}
+function estadoOferta(postulacion: { estado_id?: number | null }) {
+  return postulacion.estado_id === ESTADO_OFERTA_ID
+    && can('oferta postulaciones', 'Postulacion')
 }
 function estadoEnRevision(postulacion: { estado_id?: number | null }) {
   return postulacion.estado_id === ESTADO_EN_REVISION_ID
@@ -176,6 +181,16 @@ function estadoEnRevision(postulacion: { estado_id?: number | null }) {
         prepend-icon="tabler-calendar-event"
       >
         Gestionar entrevista
+      </VBtn>
+      <VBtn
+        v-if="estadoOferta(item)"
+        :to="`/postulaciones/asignadas/${item.id}/oferta`"
+        color="primary"
+        variant="tonal"
+        size="small"
+        prepend-icon="tabler-file-dollar"
+      >
+        Gestionar oferta
       </VBtn>
     </template>
   </DataTableComponent>

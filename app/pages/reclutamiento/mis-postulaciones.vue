@@ -7,10 +7,88 @@ definePageMeta({
 
 useSeoMeta({ title: 'Mis postulaciones' })
 
-const { estaAutenticado, postulaciones, cargarPostulaciones, token } = useCandidatoSesion()
+const { estaAutenticado, postulaciones, cargarPostulaciones, token, peticion } = useCandidatoSesion()
 
 const cargando = ref(true)
 const errorCarga = ref('')
+
+interface OfertaCandidato {
+  salario_ofrecido: number | string
+  fecha_inicio_propuesta: string
+  condiciones_oferta: string
+  estado_oferta: 'pendiente' | 'aceptada' | 'rechazada'
+  fecha_respuesta_oferta: string | null
+  motivo_rechazo_oferta: string | null
+}
+
+const dialogOferta = ref(false)
+const cargandoOferta = ref(false)
+const respondiendo = ref(false)
+const errorOferta = ref('')
+const postulacionOfertaId = ref<number | null>(null)
+const oferta = ref<OfertaCandidato | null>(null)
+const rechazando = ref(false)
+const motivoRechazo = ref('')
+
+const formatoMoneda = new Intl.NumberFormat('es-GT', { style: 'currency', currency: 'GTQ' })
+
+const estadosOferta = {
+  pendiente: { texto: 'Pendiente de tu respuesta', color: 'warning' },
+  aceptada: { texto: 'Aceptaste esta oferta', color: 'success' },
+  rechazada: { texto: 'Rechazaste esta oferta', color: 'error' },
+}
+
+async function verOferta(id: number) {
+  postulacionOfertaId.value = id
+  oferta.value = null
+  errorOferta.value = ''
+  rechazando.value = false
+  motivoRechazo.value = ''
+  dialogOferta.value = true
+  cargandoOferta.value = true
+
+  try {
+    const respuesta = await peticion<{ data: OfertaCandidato | null }>(`/api/portal/postulaciones/${id}/oferta`)
+
+    oferta.value = respuesta.data
+  }
+  catch {
+    errorOferta.value = 'No se pudo cargar la oferta.'
+  }
+  finally {
+    cargandoOferta.value = false
+  }
+}
+
+async function responderOferta(respuesta: 'aceptada' | 'rechazada') {
+  if (respondiendo.value || (respuesta === 'rechazada' && !motivoRechazo.value.trim()))
+    return
+
+  respondiendo.value = true
+  errorOferta.value = ''
+
+  try {
+    const resultado = await peticion<{ data: OfertaCandidato }>(
+      `/api/portal/postulaciones/${postulacionOfertaId.value}/oferta/responder`,
+      {
+        method: 'POST',
+        body: {
+          respuesta,
+          motivo_rechazo_oferta: respuesta === 'rechazada' ? motivoRechazo.value.trim() : null,
+        },
+      },
+    )
+
+    oferta.value = resultado.data
+    rechazando.value = false
+  }
+  catch (error: any) {
+    errorOferta.value = error?.data?.message ?? 'No se pudo registrar tu respuesta.'
+  }
+  finally {
+    respondiendo.value = false
+  }
+}
 
 const formatoFecha = new Intl.DateTimeFormat('es-GT', { dateStyle: 'long', timeZone: 'UTC' })
 
@@ -18,6 +96,7 @@ const coloresEstado: Record<string, string> = {
   recibida: 'info',
   en_revision: 'warning',
   entrevista: 'primary',
+  oferta: 'info',
   contratado: 'success',
   descartada: 'error',
 }
@@ -111,15 +190,108 @@ onMounted(() => {
             </div>
           </div>
 
-          <VChip
-            :color="coloresEstado[postulacion.estado_codigo ?? ''] ?? 'secondary'"
-            variant="flat"
-            class="postulacion-estado"
-          >
-            {{ postulacion.estado ?? 'En proceso' }}
-          </VChip>
+          <div class="d-flex align-center flex-wrap ga-3">
+            <VBtn
+              v-if="postulacion.estado_codigo === 'oferta'"
+              color="#123e66"
+              variant="flat"
+              size="small"
+              prepend-icon="tabler-file-dollar"
+              @click="verOferta(postulacion.id)"
+            >
+              Ver oferta
+            </VBtn>
+
+            <VChip
+              :color="coloresEstado[postulacion.estado_codigo ?? ''] ?? 'secondary'"
+              variant="flat"
+              class="postulacion-estado"
+            >
+              {{ postulacion.estado ?? 'En proceso' }}
+            </VChip>
+          </div>
         </VCard>
       </div>
+
+      <VDialog v-model="dialogOferta" max-width="560" :persistent="respondiendo">
+        <VCard title="Oferta de empleo">
+          <VCardText>
+            <VProgressLinear v-if="cargandoOferta" indeterminate />
+
+            <VAlert v-if="errorOferta" type="error" variant="tonal" class="mb-4">
+              {{ errorOferta }}
+            </VAlert>
+
+            <p v-if="!cargandoOferta && !oferta && !errorOferta" class="mb-0">
+              Todavía no hay una oferta para esta postulación.
+            </p>
+
+            <template v-if="oferta">
+              <VChip :color="estadosOferta[oferta.estado_oferta].color" variant="tonal" label class="mb-4">
+                {{ estadosOferta[oferta.estado_oferta].texto }}
+              </VChip>
+
+              <div class="mb-3">
+                <div class="text-caption">Salario ofrecido</div>
+                <div class="text-h6">{{ formatoMoneda.format(Number(oferta.salario_ofrecido)) }}</div>
+              </div>
+              <div class="mb-3">
+                <div class="text-caption">Fecha de inicio propuesta</div>
+                <div>{{ oferta.fecha_inicio_propuesta }}</div>
+              </div>
+              <div class="mb-3">
+                <div class="text-caption">Condiciones</div>
+                <p class="text-pre-wrap mb-0">{{ oferta.condiciones_oferta }}</p>
+              </div>
+              <div v-if="oferta.motivo_rechazo_oferta">
+                <div class="text-caption">Motivo del rechazo</div>
+                <p class="text-pre-wrap mb-0">{{ oferta.motivo_rechazo_oferta }}</p>
+              </div>
+
+              <VTextarea
+                v-if="rechazando"
+                v-model="motivoRechazo"
+                label="Motivo del rechazo"
+                rows="3"
+                maxlength="255"
+                class="mt-4"
+                hide-details="auto"
+              />
+            </template>
+          </VCardText>
+
+          <VCardActions class="justify-end px-4 pb-4 ga-2">
+            <VBtn variant="text" :disabled="respondiendo" @click="dialogOferta = false">
+              Cerrar
+            </VBtn>
+
+            <template v-if="oferta?.estado_oferta === 'pendiente'">
+              <template v-if="!rechazando">
+                <VBtn color="error" variant="tonal" @click="rechazando = true">
+                  Rechazar
+                </VBtn>
+                <VBtn color="success" variant="flat" :loading="respondiendo" @click="responderOferta('aceptada')">
+                  Aceptar
+                </VBtn>
+              </template>
+              <template v-else>
+                <VBtn variant="text" :disabled="respondiendo" @click="rechazando = false">
+                  Volver
+                </VBtn>
+                <VBtn
+                  color="error"
+                  variant="flat"
+                  :loading="respondiendo"
+                  :disabled="!motivoRechazo.trim()"
+                  @click="responderOferta('rechazada')"
+                >
+                  Confirmar rechazo
+                </VBtn>
+              </template>
+            </template>
+          </VCardActions>
+        </VCard>
+      </VDialog>
     </VContainer>
   </div>
 </template>
