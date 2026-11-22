@@ -54,18 +54,6 @@ const hayEstadosDisponibles = computed(() => (postulacion.value?.estados_disponi
 
 const hayEntrevistaAprobada = computed(() => entrevistas.value.some(e => e.resultado === 'aprobado'))
 
-const nombreCandidato = computed(() => {
-  const candidato = postulacion.value?.candidato
-
-  return [
-    candidato?.primer_nombre,
-    candidato?.segundo_nombre,
-    candidato?.tercer_nombre,
-    candidato?.primer_apellido,
-    candidato?.segundo_apellido,
-  ].filter(Boolean).join(' ')
-})
-
 const nombrePlaza = computed(() => {
   const vacante = postulacion.value?.vacante
 
@@ -141,7 +129,7 @@ onMounted(cargarPostulacion)
             <div>
               <h1 class="text-h4 mb-1">Entrevistas</h1>
               <p class="text-body-2 text-medium-emphasis mb-0">
-                {{ nombreCandidato || 'Candidato' }}
+                {{ postulacion?.candidato?.nombre_completo || 'Candidato' }}
                 <template v-if="nombrePlaza"> · {{ nombrePlaza }}</template>
               </p>
             </div>

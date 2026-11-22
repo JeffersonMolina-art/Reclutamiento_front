@@ -10,17 +10,6 @@ const formatearFechaCalendario = (valor?: string | null) =>
 
 const candidato = computed(() => props.postulacion.candidato)
 
-const nombreCompleto = computed(() =>
-  [
-    candidato.value?.primer_nombre,
-    candidato.value?.segundo_nombre,
-    candidato.value?.tercer_nombre,
-    candidato.value?.primer_apellido,
-    candidato.value?.segundo_apellido,
-  ]
-    .filter(Boolean)
-    .join(' '),
-)
 
 const iniciales = computed(() =>
   `${candidato.value?.primer_nombre?.[0] ?? ''}${candidato.value?.primer_apellido?.[0] ?? ''}`.toUpperCase() || 'C',
@@ -49,7 +38,7 @@ const descartada = computed(() => props.postulacion.estado?.codigo === 'descarta
         <div>
           <div class="d-flex align-center flex-wrap gap-2 mb-1">
             <h4 class="text-h4 font-weight-semibold">
-              {{ nombreCompleto || 'Candidato' }}
+              {{ candidato?.nombre_completo || 'Candidato' }}
             </h4>
             <VChip
               v-if="postulacion.estado"

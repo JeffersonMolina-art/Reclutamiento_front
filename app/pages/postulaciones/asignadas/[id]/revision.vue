@@ -59,22 +59,6 @@ const requisitosVacante = computed<any[]>(() => vacante.value?.requisitos ?? [])
 const puedeEditar = computed(() => can('editar postulaciones', 'Postulacion'))
 const puedeDecidir = computed(() => estadosDisponibles.value.length > 0 && puedeEditar.value)
 
-const nombreCompletoCandidato = computed(() => {
-  const datosCandidato = candidato.value
-  if (!datosCandidato)
-    return ''
-
-  return [
-    datosCandidato.primer_nombre,
-    datosCandidato.segundo_nombre,
-    datosCandidato.tercer_nombre,
-    datosCandidato.primer_apellido,
-    datosCandidato.segundo_apellido,
-  ]
-    .filter(Boolean)
-    .join(' ')
-})
-
 const inicialesCandidato = computed(() => {
   const datosCandidato = candidato.value
   if (!datosCandidato)
@@ -237,7 +221,7 @@ onMounted(cargarPostulacion)
           <div>
             <div class="d-flex align-center flex-wrap gap-2 mb-1">
               <h4 class="text-h4 font-weight-semibold">
-                {{ nombreCompletoCandidato || 'Candidato' }}
+                {{ postulacion?.candidato?.nombre_completo || 'Candidato' }}
               </h4>
               <VChip
                 v-if="postulacion.estado"

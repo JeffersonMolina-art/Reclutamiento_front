@@ -61,22 +61,6 @@ function formatearPeriodo(valor?: string | null): string {
   return texto.charAt(0).toUpperCase() + texto.slice(1)
 }
 
-const nombreCompletoCandidato = computed(() => {
-  const datosCandidato = candidato.value
-  if (!datosCandidato)
-    return ''
-
-  return [
-    datosCandidato.primer_nombre,
-    datosCandidato.segundo_nombre,
-    datosCandidato.tercer_nombre,
-    datosCandidato.primer_apellido,
-    datosCandidato.segundo_apellido,
-  ]
-    .filter(Boolean)
-    .join(' ')
-})
-
 const inicialesCandidato = computed(() => {
   const c = candidato.value
   if (!c)
@@ -161,7 +145,7 @@ function descargarCurriculum() {
   const enlaceDescarga = document.createElement('a')
 
   enlaceDescarga.href = urlDescarga
-  enlaceDescarga.download = `CURRICULUM-${nombreCompletoCandidato.value || idPostulacion.value}.${curriculum.value?.extension ?? 'pdf'}`
+  enlaceDescarga.download = `CURRICULUM-${postulacion.value?.candidato?.nombre_completo || idPostulacion.value}.${curriculum.value?.extension ?? 'pdf'}`
   enlaceDescarga.click()
   URL.revokeObjectURL(urlDescarga)
 }
@@ -210,7 +194,7 @@ onBeforeUnmount(() => {
           <div>
             <div class="d-flex align-center flex-wrap gap-2 mb-1">
               <h4 class="text-h4 font-weight-semibold">
-                {{ nombreCompletoCandidato || 'Candidato' }}
+                {{ postulacion?.candidato?.nombre_completo || 'Candidato' }}
               </h4>
               <VChip
                 v-if="postulacion.estado"

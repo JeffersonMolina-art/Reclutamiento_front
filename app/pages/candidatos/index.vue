@@ -5,7 +5,7 @@ import type { CandidatoListado } from '@/types/reclutamiento/candidato'
 
 definePageMeta({
   middleware: 'permissions',
-  action: 'ver candidatos',
+  action: 'historial candidatos postulaciones',
   subject: 'Candidato',
 })
 

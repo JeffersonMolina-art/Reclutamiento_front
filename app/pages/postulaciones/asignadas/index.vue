@@ -49,20 +49,6 @@ const columnas = computed(() => [
     exportable: false,
   },
 ])
-
-function nombreCandidato(candidato?: Candidato | null) {
-  if (!candidato)
-    return ''
-
-  return [
-    candidato.primer_nombre,
-    candidato.segundo_nombre,
-    candidato.tercer_nombre,
-    candidato.primer_apellido,
-    candidato.segundo_apellido,
-  ].filter(Boolean).join(' ')
-}
-
 function filtrar() {
   return dataTable.value?.getItems()
 }
@@ -152,7 +138,7 @@ function estadoEnRevision(postulacion: { estado_id?: number | null }) {
     </template>
 
     <template #item.candidato="{ item }">
-      {{ nombreCandidato(item.candidato) || `#${item.candidato_id}` }}
+      {{ item.candidato?.nombre_completo || `#${item.candidato_id}` }}
     </template>
 
     <template #item.estado="{ item }">
