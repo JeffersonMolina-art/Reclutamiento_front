@@ -33,6 +33,8 @@ const props = defineProps({
   claseId: { type: Number, default: null },
   tipoId: { type: Number, default: null },
   abrirCamaraDirecto: { type: Boolean, default: false },
+  campoSimple: { type: Boolean, default: false },
+  datosExtra: { type: Object, default: () => ({}) },
 
   // --- PROPS DE CONTROL ---
   mostrarMenu: { type: Boolean, default: false },
@@ -633,7 +635,7 @@ const subirArchivo = async archivosCargados => {
   subiendoArchivo.value = true
   subidaCompletada.value = false
 
-  if (props.multiple)
+  if (props.multiple && !props.campoSimple)
     archivosCargados.forEach(a => a && formData.append(`${props.name}[]`, a))
   else if (archivosCargados[0])
     formData.append(props.name, archivosCargados[0])
@@ -655,6 +657,11 @@ const subirArchivo = async archivosCargados => {
   // @ts-expect-error
   if (props.tipoId)
     formData.append('tipo_id', props.tipoId)
+
+  Object.entries(props.datosExtra).forEach(([clave, valor]) => {
+    if (valor !== null && valor !== undefined && valor !== '')
+      formData.append(clave, valor as string | Blob)
+  })
 
   try {
     const response = await post(props.urlSubida, formData)

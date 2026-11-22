@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import type { SendResponseInterface } from '@/types/sistema/types'
+import { can } from '@layouts/plugins/casl'
 
 definePageMeta({
   middleware: 'permissions',
@@ -83,6 +84,50 @@ const inicialesCandidato = computed(() => {
 })
 
 const idPostulacion = computed(() => (route.params as { id: string }).id)
+
+const { put } = useClienteRequest()
+const { showToastSuccess } = useToast()
+
+const dialogVeredicto = ref(false)
+const guardando = ref(false)
+const form = ref<{ estado_id: number | null; comentario: string; puntaje_fase: number | null }>({
+  estado_id: null,
+  comentario: '',
+  puntaje_fase: null,
+})
+
+const estadosDisponibles = computed<any[]>(() => postulacion.value?.estados_disponibles ?? [])
+
+function abrirVeredicto() {
+  form.value = { estado_id: null, comentario: '', puntaje_fase: null }
+  dialogVeredicto.value = true
+}
+
+async function darVeredicto() {
+  if (!form.value.estado_id || !form.value.comentario)
+    return
+
+  guardando.value = true
+  try {
+    const payload: any = { estado_id: form.value.estado_id, comentario: form.value.comentario }
+
+    if (form.value.puntaje_fase !== null && form.value.puntaje_fase !== ('' as any))
+      payload.puntaje_fase = Number(form.value.puntaje_fase)
+    if (form.value.porcentaje !== null && form.value.porcentaje !== ('' as any))
+      payload.porcentaje = Number(form.value.porcentaje)
+
+    await put(`api/reclutamiento/postulaciones/${idPostulacion.value}`, payload)
+    showToastSuccess('Veredicto registrado')
+    dialogVeredicto.value = false
+    await navigateTo('/postulaciones/asignadas')
+  }
+  catch (error: any) {
+    manejaError(error)
+  }
+  finally {
+    guardando.value = false
+  }
+}
 
 async function cargarCurriculum() {
   if (!curriculum.value?.tiene_cv)
@@ -216,6 +261,14 @@ onBeforeUnmount(() => {
             tooltip="Bitácora"
             circular
           />
+          <VBtn
+            v-if="estadosDisponibles.length && can('editar postulaciones', 'Postulacion')"
+            color="success"
+            prepend-icon="tabler-gavel"
+            @click="abrirVeredicto"
+          >
+            Dar veredicto
+          </VBtn>
           <VBtn
             variant="tonal"
             color="secondary"
@@ -691,6 +744,60 @@ onBeforeUnmount(() => {
         </VCard>
       </VCol>
     </VRow>
+
+    <VDialog
+      v-model="dialogVeredicto"
+      max-width="500"
+    >
+      <VCard title="Dar veredicto">
+        <VCardText>
+          <VRow>
+            <VCol cols="12">
+              <AppSelect
+                v-model="form.estado_id"
+                label="Siguiente paso"
+                :items="estadosDisponibles"
+                item-title="nombre"
+                item-value="id"
+              />
+            </VCol>
+            <VCol cols="6">
+              <AppTextField
+                v-model="form.puntaje_fase"
+                label="Puntaje de esta fase"
+                type="number"
+              />
+            </VCol>
+            <VCol cols="12">
+              <AppTextarea
+                v-model="form.comentario"
+                label="Comentario"
+                maxlength="255"
+                counter
+                rows="3"
+              />
+            </VCol>
+          </VRow>
+        </VCardText>
+        <VCardActions>
+          <VSpacer />
+          <VBtn
+            variant="text"
+            @click="dialogVeredicto = false"
+          >
+            Cancelar
+          </VBtn>
+          <VBtn
+            color="success"
+            :loading="guardando"
+            :disabled="!form.estado_id || !form.comentario"
+            @click="darVeredicto"
+          >
+            Confirmar
+          </VBtn>
+        </VCardActions>
+      </VCard>
+    </VDialog>
   </div>
 </template>
 

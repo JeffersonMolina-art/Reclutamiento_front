@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import type DataTable from '@/components/form-elements/DataTableComponent.vue'
 import { MODEL_TYPE_POSTULACION } from '@/constantes/ModelTypes'
+import { can } from '@layouts/plugins/casl'
 
 definePageMeta({
   middleware: 'permissions',
@@ -18,7 +19,8 @@ interface Candidato {
 
 const dataTable = ref<InstanceType<typeof DataTable> | null>(null)
 const estadoId = ref<number | null>(null)
-
+const ESTADO_RECIBIDA_ID = 1
+const ESTADO_EN_REVISION_ID = 2
 const columnas = computed(() => [
   { title: 'ID', key: 'id' },
   { title: 'Vacante', key: 'vacante', sortable: false },
@@ -66,6 +68,14 @@ async function limpiarFiltros() {
   estadoId.value = null
   await nextTick()
   return filtrar()
+}
+function estadoRecibida(postulacion: { estado_id?: number | null }) {
+  return postulacion.estado_id === ESTADO_RECIBIDA_ID
+    && can('recibida postulaciones', 'Postulacion')
+}
+function estadoEnRevision(postulacion: { estado_id?: number | null }) {
+  return postulacion.estado_id === ESTADO_EN_REVISION_ID
+    && can('revision postulaciones', 'Postulacion')
 }
 </script>
 
@@ -133,8 +143,18 @@ async function limpiarFiltros() {
     </template>
     <template #item.acciones="{ item }">
       <VBtn
-        v-if="item.estado?.nombre?.trim().toLowerCase() === 'recibida'"
+        v-if="estadoRecibida(item)"
         :to="`/postulaciones/asignadas/${item.id}/seguimiento`"
+        color="primary"
+        variant="tonal"
+        size="small"
+        prepend-icon="tabler-clipboard-list"
+      >
+        Seguimiento
+      </VBtn>
+      <VBtn
+        v-if="estadoEnRevision(item)"
+        :to="`/postulaciones/asignadas/${item.id}/revision`"
         color="primary"
         variant="tonal"
         size="small"
