@@ -18,6 +18,7 @@ interface Candidato {
 }
 
 const dataTable = ref<InstanceType<typeof DataTable> | null>(null)
+const mostrarCrear = ref(false)
 const estadoId = ref<number | null>(null)
 const ESTADO_RECIBIDA_ID = 1
 const ESTADO_EN_REVISION_ID = 2
@@ -90,9 +91,23 @@ function estadoEnRevision(postulacion: { estado_id?: number | null }) {
 </script>
 
 <template>
-  <div class="mb-4">
+  <div class="mb-4 d-flex align-center justify-space-between flex-wrap ga-2">
     <h1>Postulaciones</h1>
+
+    <VBtn
+      v-if="can('crear postulaciones', 'Postulacion')"
+      color="primary"
+      prepend-icon="tabler-plus"
+      @click="mostrarCrear = true"
+    >
+      Nueva postulación
+    </VBtn>
   </div>
+
+  <PostulacionCrearModal
+    v-model="mostrarCrear"
+    @creada="filtrar"
+  />
 
   <VCard class="mb-4">
     <VCardText>
