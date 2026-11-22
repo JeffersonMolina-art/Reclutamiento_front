@@ -43,3 +43,17 @@ export interface HistorialCandidato {
   candidato: Pick<CandidatoListado, 'id' | 'nombre_completo' | 'dpi' | 'correo' | 'telefono'>
   postulaciones: PostulacionHistorial[]
 }
+
+export interface PostulacionHistorialItem {
+  id: number
+  candidato_id: number
+  candidato: string
+  correo?: string | null
+  vacante_id: number
+  vacante: string
+  estado: string
+  estado_codigo: string
+  fecha_postulacion: string
+  porcentaje?: number | null
+  seguimiento: SeguimientoPostulacion[]
+}

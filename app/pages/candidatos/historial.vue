@@ -6,8 +6,8 @@ import type { SendResponseInterface } from '@/types/sistema/types'
 
 definePageMeta({
   middleware: 'permissions',
-  action: 'ver postulaciones',
-  subject: 'Postulacion',
+  action: 'historial candidatos',
+  subject: 'Candidato',
 })
 
 const { get } = useClienteRequest()

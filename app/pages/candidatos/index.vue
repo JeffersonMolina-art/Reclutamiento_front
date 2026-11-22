@@ -5,8 +5,8 @@ import type { CandidatoListado } from '@/types/reclutamiento/candidato'
 
 definePageMeta({
   middleware: 'permissions',
-  action: 'ver postulaciones',
-  subject: 'Postulacion',
+  action: 'ver candidatos',
+  subject: 'Candidato',
 })
 
 const mostrarDetalle = ref(false)

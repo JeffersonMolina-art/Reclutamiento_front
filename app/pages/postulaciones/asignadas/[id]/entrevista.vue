@@ -1,6 +1,8 @@
 <script setup lang="ts">
 import type { SendResponseInterface } from '@/types/sistema/types'
 import { can } from '@layouts/plugins/casl'
+import type { EstadoDisponible, Entrevista } from '@/types/entrevistas/types'
+import { REGEX_MEET } from '@/constantes/Entrevistas'
 
 definePageMeta({
   middleware: 'permissions',
@@ -8,19 +10,8 @@ definePageMeta({
   subject: 'Postulacion',
 })
 
-interface Entrevista {
-  id: number
-  fecha_hora_programada: string
-  modalidad: 'presencial' | 'virtual'
-  ubicacion_o_enlace: string
-  tipo_entrevista: string
-  observaciones?: string | null
-  resultado?: 'pendiente' | 'aprobado' | 'no_aprobado' | null
-  entrevistador?: { nombre_completo?: string | null } | null
-  estado?: { nombre: string } | null
-}
-
 interface PostulacionDetalle {
+  id: number
   candidato?: {
     primer_nombre?: string | null
     segundo_nombre?: string | null
@@ -35,107 +26,33 @@ interface PostulacionDetalle {
   } | null
   estado?: { codigo: string } | null
   entrevistas?: Entrevista[]
-  estados_disponibles?: { id: number; codigo: string; nombre: string }[]
+  estados_disponibles?: EstadoDisponible[]
 }
 
 const route = useRoute()
-const { get, post, put } = useClienteRequest()
-const { showToastSuccess } = useToast()
-
-const endpoint = computed(() =>
-  `api/reclutamiento/postulaciones/${encodeURIComponent(String(route.params.id))}`,
-)
+const { get } = useClienteRequest()
 
 const postulacion = ref<PostulacionDetalle | null>(null)
 const entrevistas = ref<Entrevista[]>([])
 const cargando = ref(true)
 const errorCarga = ref(false)
-const guardando = ref(false)
 const dialogAgendar = ref(false)
-const contacto = ref<{ nombre: string; correo?: string | null; telefono?: string | null } | null>(null)
-const cargandoContacto = ref(false)
-const formulario = reactive({
-  fecha_hora_programada: '',
-  modalidad: 'presencial' as Entrevista['modalidad'],
-  ubicacion_o_enlace: '',
-  tipo_entrevista: null as string | null,
-  entrevistador_id: null as number | null,
-  observaciones: '',
-})
-
-const tiposEntrevista = [
-  { title: 'Técnica', value: 'tecnica' },
-  { title: 'Recursos humanos', value: 'recursos_humanos' },
-]
-
-const resultados: Record<string, { texto: string; color: string }> = {
-  pendiente: { texto: 'Pendiente', color: 'warning' },
-  aprobado: { texto: 'Aprobado', color: 'success' },
-  no_aprobado: { texto: 'No aprobado', color: 'error' },
-}
-
-const etiquetaTipo = (valor: string) => tiposEntrevista.find(t => t.value === valor)?.title ?? valor
-const resultadoDe = (e: Entrevista) => resultados[e.resultado ?? 'pendiente'] ?? resultados.pendiente
-const guardandoResultado = ref<number | null>(null)
-
-const modalidades = [
-  { title: 'Presencial', value: 'presencial' },
-  { title: 'Virtual', value: 'virtual' },
-]
+const dialogVeredicto = ref(false)
+const postulacionId = computed(() => (route.params as { id: string }).id)
 
 const puedeAgendar = computed(() =>
   postulacion.value?.estado?.codigo === 'entrevista'
   && can('editar postulaciones', 'Postulacion'),
 )
 
-const dialogVeredicto = ref(false)
-const guardandoVeredicto = ref(false)
-const veredicto = reactive<{ estado_id: number | null; comentario: string; puntaje_fase: number | string | null }>({
-  estado_id: null,
-  comentario: '',
-  puntaje_fase: null,
-})
-
 const puedeCambiarPaso = computed(() =>
-  entrevistas.value.length > 0
-  && (postulacion.value?.estados_disponibles?.length ?? 0) > 0
+  postulacion.value?.estado?.codigo === 'entrevista'
   && can('editar postulaciones', 'Postulacion'),
 )
 
-function abrirVeredicto() {
-  Object.assign(veredicto, { estado_id: null, comentario: '', puntaje_fase: null })
-  dialogVeredicto.value = true
-}
+const hayEstadosDisponibles = computed(() => (postulacion.value?.estados_disponibles?.length ?? 0) > 0)
 
-async function darVeredicto() {
-  if (!veredicto.estado_id || !veredicto.comentario.trim() || guardandoVeredicto.value)
-    return
-
-  guardandoVeredicto.value = true
-
-  try {
-    const payload: Record<string, any> = {
-      estado_id: veredicto.estado_id,
-      comentario: veredicto.comentario.trim(),
-    }
-
-    if (veredicto.puntaje_fase !== null && veredicto.puntaje_fase !== '')
-      payload.puntaje_fase = Number(veredicto.puntaje_fase)
-
-    await put(endpoint.value, payload)
-    showToastSuccess('Veredicto registrado')
-    dialogVeredicto.value = false
-    await navigateTo('/postulaciones/asignadas')
-  }
-  catch (error) {
-    manejaError(error)
-  }
-  finally {
-    guardandoVeredicto.value = false
-  }
-}
-
-const esVirtual = computed(() => formulario.modalidad === 'virtual')
+const hayEntrevistaAprobada = computed(() => entrevistas.value.some(e => e.resultado === 'aprobado'))
 
 const nombreCandidato = computed(() => {
   const candidato = postulacion.value?.candidato
@@ -155,51 +72,16 @@ const nombrePlaza = computed(() => {
   return vacante?.puesto?.nombre || vacante?.nombre || vacante?.titulo
 })
 
-const formatoFecha = new Intl.DateTimeFormat('es-GT', {
-  dateStyle: 'medium',
-  timeStyle: 'short',
-  timeZone: 'America/Guatemala',
-})
-
-const regexMeet = /^https:\/\/meet\.google\.com\/[a-z]{3}-[a-z]{4}-[a-z]{3}(?:\?\S*)?$/i
-
-function formatearFecha(valor: string) {
-  const fecha = new Date(valor)
-
-  return Number.isNaN(fecha.getTime()) ? valor : formatoFecha.format(fecha)
-}
-
 const reunionMeet = computed(() =>
-  entrevistas.value.find(e => e.modalidad === 'virtual' && regexMeet.test(e.ubicacion_o_enlace)),
+  entrevistas.value.find(e => e.modalidad === 'virtual' && REGEX_MEET.test(e.ubicacion_o_enlace)),
 )
-
-async function abrirAgendar() {
-  dialogAgendar.value = true
-
-  if (contacto.value)
-    return
-
-  cargandoContacto.value = true
-
-  try {
-    const respuesta = await get<SendResponseInterface<NonNullable<typeof contacto.value>>>(`${endpoint.value}/contacto`)
-
-    contacto.value = respuesta.data
-  }
-  catch (error) {
-    manejaError(error)
-  }
-  finally {
-    cargandoContacto.value = false
-  }
-}
 
 async function cargarPostulacion() {
   cargando.value = true
   errorCarga.value = false
 
   try {
-    const respuesta = await get<SendResponseInterface<PostulacionDetalle>>(endpoint.value)
+    const respuesta = await get<SendResponseInterface<PostulacionDetalle>>(`api/reclutamiento/postulaciones/${postulacionId.value}`)
 
     postulacion.value = respuesta.data
     entrevistas.value = [...(respuesta.data.entrevistas ?? [])]
@@ -214,61 +96,15 @@ async function cargarPostulacion() {
   }
 }
 
-async function agendarEntrevista() {
-  if (!puedeAgendar.value || guardando.value)
-    return
-
-  guardando.value = true
-
-  try {
-    const respuesta = await post<SendResponseInterface<Entrevista>>(
-      `${endpoint.value}/entrevistas`,
-      {
-        ...formulario,
-        fecha_hora_programada: formulario.fecha_hora_programada.replace('T', ' '),
-        ubicacion_o_enlace: formulario.ubicacion_o_enlace.trim(),
-        tipo_entrevista: formulario.tipo_entrevista,
-        observaciones: formulario.observaciones.trim() || null,
-      },
-    )
-
-    entrevistas.value.unshift(respuesta.data)
-
-    formulario.fecha_hora_programada = ''
-    formulario.ubicacion_o_enlace = ''
-    formulario.tipo_entrevista = null
-    formulario.entrevistador_id = null
-    formulario.observaciones = ''
-
-    showToastSuccess('Entrevista programada con éxito.')
-    dialogAgendar.value = false
-  }
-  catch (error) {
-    manejaError(error)
-  }
-  finally {
-    guardando.value = false
-  }
+function alAgendar(entrevista: Entrevista) {
+  entrevistas.value.unshift(entrevista)
 }
 
-async function registrarResultado(entrevista: Entrevista, resultado: 'aprobado' | 'no_aprobado') {
-  guardandoResultado.value = entrevista.id
+function alActualizar(entrevista: Entrevista) {
+  const indice = entrevistas.value.findIndex(e => e.id === entrevista.id)
 
-  try {
-    const respuesta = await post<SendResponseInterface<Entrevista>>(
-      `api/reclutamiento/entrevistas/${entrevista.id}/resultado`,
-      { resultado, observaciones: entrevista.observaciones || null },
-    )
-
-    Object.assign(entrevista, respuesta.data)
-    showToastSuccess('Resultado registrado con éxito.')
-  }
-  catch (error) {
-    manejaError(error)
-  }
-  finally {
-    guardandoResultado.value = null
-  }
+  if (indice !== -1)
+    entrevistas.value[indice] = { ...entrevistas.value[indice], ...entrevista }
 }
 
 onMounted(cargarPostulacion)
@@ -311,35 +147,41 @@ onMounted(cargarPostulacion)
             </div>
           </div>
 
-          <VBtn
-            v-if="reunionMeet"
-            :href="reunionMeet.ubicacion_o_enlace"
-            target="_blank"
-            rel="noopener noreferrer"
-            color="primary"
-            prepend-icon="tabler-video"
-            append-icon="tabler-external-link"
-          >
-            Ir a Google Meet
-          </VBtn>
+          <div class="d-flex flex-wrap align-center ga-3 ms-sm-auto">
+            <VBtn
+              v-if="reunionMeet"
+              :href="reunionMeet.ubicacion_o_enlace"
+              target="_blank"
+              rel="noopener noreferrer"
+              color="primary"
+              variant="tonal"
+              prepend-icon="tabler-video"
+              append-icon="tabler-external-link"
+            >
+              Ir a Google Meet
+            </VBtn>
 
-          <VBtn
-            v-else-if="puedeAgendar"
-            color="primary"
-            prepend-icon="tabler-calendar-plus"
-            @click="abrirAgendar"
-          >
-            Agendar entrevista
-          </VBtn>
+            <VBtn
+              v-else-if="puedeAgendar"
+              color="primary"
+              variant="tonal"
+              prepend-icon="tabler-calendar-plus"
+              @click="dialogAgendar = true"
+            >
+              Agendar entrevista
+            </VBtn>
 
-          <VBtn
-            v-if="puedeCambiarPaso"
-            color="success"
-            prepend-icon="tabler-checks"
-            @click="abrirVeredicto"
-          >
-            Dar veredicto
-          </VBtn>
+            <VBtn
+              v-if="puedeCambiarPaso"
+              color="success"
+              variant="flat"
+              prepend-icon="tabler-gavel"
+              :disabled="!hayEntrevistaAprobada || !hayEstadosDisponibles"
+              @click="dialogVeredicto = true"
+            >
+              Dar veredicto
+            </VBtn>
+          </div>
         </VCardText>
       </VCard>
 
@@ -361,283 +203,25 @@ onMounted(cargarPostulacion)
           cols="12"
           lg="6"
         >
-          <VCard variant="outlined" height="100%">
-            <VCardText class="pa-5">
-              <div class="d-flex flex-wrap align-start justify-space-between ga-3 mb-4">
-                <div class="d-flex align-center ga-3">
-                  <VAvatar
-                    :color="entrevista.modalidad === 'virtual' ? 'info' : 'primary'"
-                    variant="tonal"
-                    rounded="lg"
-                    size="40"
-                  >
-                    <VIcon
-                      :icon="entrevista.modalidad === 'virtual' ? 'tabler-video' : 'tabler-map-pin'"
-                      size="20"
-                    />
-                  </VAvatar>
-
-                  <div>
-                    <h3 class="text-subtitle-1 font-weight-bold">
-                      {{ etiquetaTipo(entrevista.tipo_entrevista) }}
-                    </h3>
-                    <span class="text-body-2 text-medium-emphasis">
-                      {{ entrevista.modalidad === 'virtual' ? 'Virtual' : 'Presencial' }}
-                      <template v-if="entrevista.entrevistador?.nombre_completo">
-                        · {{ entrevista.entrevistador.nombre_completo }}
-                      </template>
-                    </span>
-                  </div>
-                </div>
-
-                <div class="d-flex ga-2">
-                  <VChip size="small" :color="resultadoDe(entrevista).color" variant="tonal" label>
-                    {{ resultadoDe(entrevista).texto }}
-                  </VChip>
-                  <VChip v-if="entrevista.estado" size="small" color="primary" variant="tonal" label>
-                    {{ entrevista.estado.nombre }}
-                  </VChip>
-                </div>
-              </div>
-
-              <div class="d-flex align-center ga-2 text-body-2 mb-2">
-                <VIcon icon="tabler-clock" size="18" class="text-medium-emphasis" />
-                {{ formatearFecha(entrevista.fecha_hora_programada) }}
-              </div>
-
-              <div
-                v-if="entrevista.modalidad === 'presencial'"
-                class="d-flex align-center ga-2 text-body-2"
-              >
-                <VIcon icon="tabler-map-pin" size="18" class="text-medium-emphasis" />
-                {{ entrevista.ubicacion_o_enlace }}
-              </div>
-
-              <div v-if="entrevista.observaciones" class="entrevistas__observaciones mt-4 pa-3">
-                <div class="text-caption font-weight-medium mb-1">Observaciones</div>
-                <p class="text-body-2 text-medium-emphasis text-pre-wrap mb-0">
-                  {{ entrevista.observaciones }}
-                </p>
-              </div>
-
-              <VBtn
-                v-if="entrevista.modalidad === 'virtual' && regexMeet.test(entrevista.ubicacion_o_enlace)"
-                :href="entrevista.ubicacion_o_enlace"
-                target="_blank"
-                rel="noopener noreferrer"
-                variant="tonal"
-                color="primary"
-                size="small"
-                append-icon="tabler-external-link"
-                class="mt-4"
-              >
-                Unirse a Meet
-              </VBtn>
-
-              <div
-                v-if="can('editar postulaciones', 'Postulacion') && entrevista.resultado === 'pendiente'"
-                class="d-flex ga-2 mt-4"
-              >
-                <VBtn
-                  color="success"
-                  size="small"
-                  variant="tonal"
-                  prepend-icon="tabler-check"
-                  :loading="guardandoResultado === entrevista.id"
-                  @click="registrarResultado(entrevista, 'aprobado')"
-                >
-                  Aprobado
-                </VBtn>
-                <VBtn
-                  color="error"
-                  size="small"
-                  variant="tonal"
-                  prepend-icon="tabler-x"
-                  :disabled="guardandoResultado === entrevista.id"
-                  @click="registrarResultado(entrevista, 'no_aprobado')"
-                >
-                  No aprobado
-                </VBtn>
-              </div>
-            </VCardText>
-          </VCard>
+          <EntrevistaCard
+            :entrevista="entrevista"
+            @actualizada="alActualizar"
+          />
         </VCol>
       </VRow>
 
-      <VDialog v-model="dialogVeredicto" :persistent="guardandoVeredicto" max-width="500">
-        <VCard title="Dar veredicto">
-          <VCardText>
-            <VRow>
-              <VCol cols="12">
-                <AppSelect
-                  v-model="veredicto.estado_id"
-                  label="Siguiente paso"
-                  :items="postulacion.estados_disponibles"
-                  item-title="nombre"
-                  item-value="id"
-                />
-              </VCol>
-              <VCol cols="6">
-                <AppTextField
-                  v-model="veredicto.puntaje_fase"
-                  label="Puntaje de esta fase"
-                  type="number"
-                />
-              </VCol>
-              <VCol cols="12">
-                <AppTextarea
-                  v-model="veredicto.comentario"
-                  label="Comentario"
-                  maxlength="255"
-                  rows="3"
-                />
-              </VCol>
-            </VRow>
-          </VCardText>
-          <VCardActions>
-            <VSpacer />
-            <VBtn variant="text" @click="dialogVeredicto = false">
-              Cancelar
-            </VBtn>
-            <VBtn
-              color="success"
-              :loading="guardandoVeredicto"
-              :disabled="!veredicto.estado_id || !veredicto.comentario.trim()"
-              @click="darVeredicto"
-            >
-              Confirmar
-            </VBtn>
-          </VCardActions>
-        </VCard>
-      </VDialog>
+      <EntrevistaVeredictoModal
+        v-model:mostrar-modal="dialogVeredicto"
+        :postulacion-id="postulacionId"
+        :estados-disponibles="postulacion.estados_disponibles ?? []"
+        @guardado="navigateTo('/postulaciones/asignadas')"
+      />
 
-      <VDialog v-model="dialogAgendar" :persistent="guardando" max-width="640">
-        <VCard>
-          <div class="d-flex align-center ga-3 pa-5">
-            <VAvatar color="primary" variant="tonal" rounded="lg" size="40">
-              <VIcon icon="tabler-calendar-plus" size="20" />
-            </VAvatar>
-            <h2 class="text-h6">Agendar entrevista</h2>
-          </div>
-
-          <VDivider />
-
-          <form @submit.prevent="agendarEntrevista">
-            <VCardText class="pa-5">
-              <VProgressLinear v-if="cargandoContacto" indeterminate class="mb-4" />
-
-              <div v-else-if="contacto" class="entrevistas__observaciones mb-4 pa-3">
-                <div class="text-subtitle-2">{{ contacto.nombre }}</div>
-                <div class="d-flex flex-wrap ga-3 text-body-2">
-                  <a v-if="contacto.correo" :href="`mailto:${contacto.correo}`">
-                    {{ contacto.correo }}
-                  </a>
-                  <a v-if="contacto.telefono" :href="`tel:${contacto.telefono}`">
-                    {{ contacto.telefono }}
-                  </a>
-                  <span v-if="!contacto.correo && !contacto.telefono" class="text-medium-emphasis">
-                    Sin datos de contacto
-                  </span>
-                </div>
-              </div>
-
-              <VRow dense>
-                <VCol cols="12" sm="7">
-                  <VTextField
-                    v-model="formulario.fecha_hora_programada"
-                    type="datetime-local"
-                    label="Fecha y hora"
-                    hint="Hora de Guatemala"
-                    persistent-hint
-                    required
-                  />
-                </VCol>
-
-                <VCol cols="12" sm="5">
-                  <VSelect
-                    v-model="formulario.modalidad"
-                    :items="modalidades"
-                    label="Modalidad"
-                    @update:model-value="formulario.ubicacion_o_enlace = ''"
-                  />
-                </VCol>
-
-                <VCol cols="12" sm="6">
-                  <VSelect
-                    v-model="formulario.tipo_entrevista"
-                    :items="tiposEntrevista"
-                    label="Tipo de entrevista"
-                    required
-                  />
-                </VCol>
-
-                <VCol cols="12" sm="6">
-                  <SelectorPro
-                    v-model:item-selected="formulario.entrevistador_id"
-                    url="api/users"
-                    item-value="id"
-                    item-title="nombre_completo"
-                    :campos-a-filtrar="['buscarPorNombre']"
-                    label="Entrevistador (por defecto, tú)"
-                    clearable
-                  />
-                </VCol>
-
-                <VCol cols="12">
-                  <VTextField
-                    v-model="formulario.ubicacion_o_enlace"
-                    :label="esVirtual ? 'Enlace de Google Meet' : 'Lugar de la entrevista'"
-                    :type="esVirtual ? 'url' : 'text'"
-                    maxlength="500"
-                    required
-                  />
-
-                  <VBtn
-                    v-if="esVirtual"
-                    href="https://meet.google.com/"
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    variant="text"
-                    color="primary"
-                    size="small"
-                    append-icon="tabler-external-link"
-                    class="mb-2"
-                  >
-                    Abrir Google Meet
-                  </VBtn>
-                </VCol>
-
-                <VCol cols="12">
-                  <VTextarea
-                    v-model="formulario.observaciones"
-                    label="Observaciones"
-                    rows="2"
-                    maxlength="255"
-                    hide-details="auto"
-                  />
-                </VCol>
-              </VRow>
-            </VCardText>
-
-            <VDivider />
-
-            <VCardActions class="justify-end ga-2 px-5 py-4">
-              <VBtn
-                type="button"
-                variant="text"
-                :disabled="guardando"
-                @click="dialogAgendar = false"
-              >
-                Cancelar
-              </VBtn>
-
-              <VBtn type="submit" color="primary" variant="flat" :loading="guardando">
-                Agendar entrevista
-              </VBtn>
-            </VCardActions>
-          </form>
-        </VCard>
-      </VDialog>
+      <EntrevistaAgendarModal
+        v-model:mostrar-modal="dialogAgendar"
+        :postulacion-id="postulacionId"
+        @agendada="alAgendar"
+      />
     </template>
   </div>
 </template>
@@ -645,11 +229,5 @@ onMounted(cargarPostulacion)
 <style scoped>
 .entrevistas__encabezado {
   border-inline-start: 3px solid rgb(var(--v-theme-primary));
-}
-
-.entrevistas__observaciones {
-  background-color: rgba(var(--v-theme-on-surface), 0.05);
-  border-radius: 8px;
-  overflow-wrap: anywhere;
 }
 </style>

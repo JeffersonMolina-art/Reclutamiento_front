@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import type { SendResponseInterface } from '@/types/sistema/types'
 import { can } from '@layouts/plugins/casl'
+import {MODEL_TYPE_POSTULACION} from "@/constantes/ModelTypes";
 
 definePageMeta({
   middleware: 'permissions',
@@ -160,7 +161,7 @@ function descargarCurriculum() {
   const enlaceDescarga = document.createElement('a')
 
   enlaceDescarga.href = urlDescarga
-  enlaceDescarga.download = `cv-${nombreCompletoCandidato.value || idPostulacion.value}.${curriculum.value?.extension ?? 'pdf'}`
+  enlaceDescarga.download = `CURRICULUM-${nombreCompletoCandidato.value || idPostulacion.value}.${curriculum.value?.extension ?? 'pdf'}`
   enlaceDescarga.click()
   URL.revokeObjectURL(urlDescarga)
 }
@@ -193,7 +194,7 @@ onBeforeUnmount(() => {
 
 <template>
   <div v-if="postulacion">
-    <!-- Encabezado principal -->
+    <!-- INFORMACION CANDIDATO -->
     <VCard class="mb-6">
       <VCardText class="d-flex flex-wrap justify-space-between align-center gap-4">
         <div class="d-flex align-center gap-4">
@@ -252,15 +253,25 @@ onBeforeUnmount(() => {
           </div>
         </div>
 
-        <div class="d-flex align-center gap-2">
+        <div class="d-flex flex-wrap align-center ga-3">
+          <VBtn
+            variant="text"
+            color="secondary"
+            prepend-icon="tabler-arrow-left"
+            @click="navigateTo('/postulaciones/asignadas')"
+          >
+            Volver
+          </VBtn>
+
           <BitacoraModal
-            :model_id="postulacion.id"
-            :model_type="MODEL_TYPE_POSTULACION"
+            :model-id="postulacion.id"
+            :model-type="MODEL_TYPE_POSTULACION"
             :codigo="postulacion.id"
             icon="tabler-history"
             tooltip="Bitácora"
             circular
           />
+
           <VBtn
             v-if="estadosDisponibles.length && can('editar postulaciones', 'Postulacion')"
             color="success"
@@ -269,25 +280,13 @@ onBeforeUnmount(() => {
           >
             Dar veredicto
           </VBtn>
-          <VBtn
-            variant="tonal"
-            color="secondary"
-            prepend-icon="tabler-arrow-left"
-            @click="navigateTo('/postulaciones/asignadas')"
-          >
-            Volver
-          </VBtn>
         </div>
       </VCardText>
     </VCard>
 
     <VRow>
-      <!-- Columna izquierda: Información del candidato -->
-      <VCol
-        cols="12"
-        md="5"
-      >
-        <!-- Datos de contacto y personales -->
+      <!-- INFORMACIÓN DEL CANDIDATO -->
+      <VCol cols="12" md="5">
         <VCard class="mb-6">
           <VCardItem>
             <template #prepend>
@@ -396,8 +395,7 @@ onBeforeUnmount(() => {
             </VRow>
           </VCardText>
         </VCard>
-
-        <!-- Detalle de la plaza -->
+        <!-- VACANTE -->
         <VCard class="mb-6">
           <VCardItem>
             <template #prepend>
@@ -450,8 +448,7 @@ onBeforeUnmount(() => {
             </VRow>
           </VCardText>
         </VCard>
-
-        <!-- Conocimientos -->
+        <!-- CONOCIMIENTOS -->
         <VCard class="mb-6">
           <VCardItem>
             <template #prepend>
@@ -502,8 +499,7 @@ onBeforeUnmount(() => {
             </div>
           </VCardText>
         </VCard>
-
-        <!-- Experiencia laboral -->
+        <!-- EXPERIENCIA LABORAL -->
         <VCard class="mb-6">
           <VCardItem>
             <template #prepend>
@@ -560,8 +556,7 @@ onBeforeUnmount(() => {
             </div>
           </VCardText>
         </VCard>
-
-        <!-- Formación académica -->
+        <!-- FORMACIÓN ACADÉMICA -->
         <VCard>
           <VCardItem>
             <template #prepend>
@@ -623,11 +618,8 @@ onBeforeUnmount(() => {
         </VCard>
       </VCol>
 
-      <!-- Columna derecha: Visor de Currículum -->
-      <VCol
-        cols="12"
-        md="7"
-      >
+      <!-- VISUALIZACIÓN DEL CURRÍCULUM VITAE -->
+      <VCol cols="12" md="7">
         <VCard class="cv-sticky-card">
           <VCardItem>
             <template #prepend>
@@ -745,59 +737,62 @@ onBeforeUnmount(() => {
       </VCol>
     </VRow>
 
-    <VDialog
-      v-model="dialogVeredicto"
+    <ModalBasico
+      v-model:mostrar-modal="dialogVeredicto"
+      titulo="Dar veredicto"
       max-width="500"
     >
-      <VCard title="Dar veredicto">
-        <VCardText>
-          <VRow>
-            <VCol cols="12">
-              <AppSelect
-                v-model="form.estado_id"
-                label="Siguiente paso"
-                :items="estadosDisponibles"
-                item-title="nombre"
-                item-value="id"
-              />
-            </VCol>
-            <VCol cols="6">
-              <AppTextField
-                v-model="form.puntaje_fase"
-                label="Puntaje de esta fase"
-                type="number"
-              />
-            </VCol>
-            <VCol cols="12">
-              <AppTextarea
-                v-model="form.comentario"
-                label="Comentario"
-                maxlength="255"
-                counter
-                rows="3"
-              />
-            </VCol>
-          </VRow>
-        </VCardText>
-        <VCardActions>
-          <VSpacer />
-          <VBtn
-            variant="text"
-            @click="dialogVeredicto = false"
-          >
-            Cancelar
-          </VBtn>
-          <VBtn
-            color="success"
-            :loading="guardando"
-            :disabled="!form.estado_id || !form.comentario"
-            @click="darVeredicto"
-          >
-            Confirmar
-          </VBtn>
-        </VCardActions>
-      </VCard>
-    </VDialog>
+      <VRow>
+        <VCol
+          cols="12"
+          md="6"
+        >
+          <AppSelect
+            v-model="form.estado_id"
+            label="Siguiente paso"
+            :items="estadosDisponibles"
+            item-title="nombre"
+            item-value="id"
+          />
+        </VCol>
+        <VCol
+          cols="12"
+          md="6"
+        >
+          <AppTextField
+            v-model="form.puntaje_fase"
+            label="Puntaje de esta fase"
+            type="number"
+          />
+        </VCol>
+        <VCol cols="12">
+          <AppTextarea
+            v-model="form.comentario"
+            label="Comentario"
+            maxlength="255"
+            counter
+            rows="3"
+          />
+        </VCol>
+      </VRow>
+
+      <div class="d-flex justify-end gap-2 mt-4">
+        <VBtn
+          variant="text"
+          @click="dialogVeredicto = false"
+        >
+          Cancelar
+        </VBtn>
+        <VBtn
+          color="success"
+          :loading="guardando"
+          :disabled="!form.estado_id || !form.comentario"
+          @click="darVeredicto"
+        >
+          Confirmar
+        </VBtn>
+      </div>
+    </ModalBasico>
   </div>
 </template>
 

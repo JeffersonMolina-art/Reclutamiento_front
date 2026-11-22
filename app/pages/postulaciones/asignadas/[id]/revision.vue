@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import type { SendResponseInterface } from '@/types/sistema/types'
 import { can } from '@layouts/plugins/casl'
+import {MODEL_TYPE_POSTULACION} from "@/constantes/ModelTypes";
 
 definePageMeta({
   middleware: 'permissions',
@@ -77,7 +78,7 @@ const nombreCompletoCandidato = computed(() => {
 const inicialesCandidato = computed(() => {
   const datosCandidato = candidato.value
   if (!datosCandidato)
-    return 'C'
+    return 'CA'
 
   return `${datosCandidato.primer_nombre?.[0] ?? ''}${datosCandidato.primer_apellido?.[0] ?? ''}`.toUpperCase() || 'C'
 })
@@ -221,7 +222,6 @@ onMounted(cargarPostulacion)
 
 <template>
   <div v-if="postulacion">
-    <!-- Encabezado -->
     <VCard class="mb-6">
       <VCardText class="d-flex flex-wrap justify-space-between align-center gap-4">
         <div class="d-flex align-center gap-4">
@@ -276,32 +276,32 @@ onMounted(cargarPostulacion)
           </div>
         </div>
 
-        <div class="d-flex align-center flex-wrap gap-3">
-          <VChip
-            :color="todosLosExamenesCargados ? 'success' : 'warning'"
-            variant="tonal"
-            label
-            prepend-icon="tabler-clipboard-check"
-          >
-            Exámenes {{ cantidadExamenesCargados }}/{{ tiposExamen.length }}
-          </VChip>
-
+        <div class="d-flex flex-wrap align-center ga-3">
           <VBtn
-            v-if="puedeDecidir"
-            color="success"
-            prepend-icon="tabler-arrow-right"
-            @click="abrirDecision"
-          >
-            Siguiente paso
-          </VBtn>
-
-          <VBtn
-            variant="tonal"
+            variant="text"
             color="secondary"
             prepend-icon="tabler-arrow-left"
             @click="navigateTo('/postulaciones/asignadas')"
           >
             Volver
+          </VBtn>
+
+          <BitacoraModal
+            :model-id="postulacion.id"
+            :model-type="MODEL_TYPE_POSTULACION"
+            icon="tabler-history"
+            text="Bitácora"
+            tooltip="Bitácora"
+            circular
+          />
+
+          <VBtn
+            v-if="puedeDecidir"
+            color="success"
+            append-icon="tabler-arrow-right"
+            @click="abrirDecision"
+          >
+            Siguiente paso
           </VBtn>
         </div>
       </VCardText>
@@ -590,7 +590,6 @@ onMounted(cargarPostulacion)
               </div>
             </div>
 
-            <!-- Registrar nueva evaluación -->
             <div v-if="puedeEditar">
               <div class="text-overline text-medium-emphasis mb-3">
                 {{ examenCargado(examen.coleccion) ? 'Agregar otra evaluación' : '1. Registra la evaluación' }}
@@ -630,7 +629,6 @@ onMounted(cargarPostulacion)
               </VRow>
             </div>
 
-            <!-- Subida de archivo -->
             <div>
               <div class="text-overline text-medium-emphasis mb-3">
                 {{ puedeEditar ? '2. Adjunta el archivo' : 'Archivos' }}
@@ -668,95 +666,70 @@ onMounted(cargarPostulacion)
       </VCol>
     </VRow>
 
-    <VDialog
-      v-model="dialogoDecision"
+    <ModalBasico
+      v-model:mostrar-modal="dialogoDecision"
+      titulo="Siguiente paso"
+      subtitulo="Define cómo continúa la postulación"
       max-width="520"
       :persistent="guardando"
     >
-      <VCard>
-        <VCardItem>
-          <template #prepend>
-            <VAvatar
-              color="success"
-              variant="tonal"
-              size="40"
-              rounded
-            >
-              <VIcon
-                icon="tabler-arrow-right"
-                size="22"
-              />
-            </VAvatar>
-          </template>
-          <VCardTitle>Siguiente paso</VCardTitle>
-          <VCardSubtitle>Define cómo continúa la postulación</VCardSubtitle>
-        </VCardItem>
+      <VAlert
+        v-if="!todosLosExamenesCargados"
+        type="warning"
+        variant="tonal"
+        density="compact"
+        class="mb-4"
+      >
+        Aún faltan exámenes por cargar ({{ cantidadExamenesCargados }}/{{ tiposExamen.length }}).
+      </VAlert>
 
-        <VDivider />
+      <VRow>
+        <VCol cols="12">
+          <AppSelect
+            v-model="formulario.estado_id"
+            label="Siguiente paso"
+            :items="estadosDisponibles"
+            item-title="nombre"
+            item-value="id"
+          />
+        </VCol>
+        <VCol cols="12">
+          <AppTextField
+            v-model="formulario.puntaje_fase"
+            label="Puntaje de esta fase"
+            type="number"
+          />
+        </VCol>
+        <VCol cols="12">
+          <AppTextarea
+            v-model="formulario.comentario"
+            label="Comentario"
+            maxlength="255"
+            counter
+            rows="3"
+          />
+        </VCol>
+      </VRow>
 
-        <VCardText>
-          <VAlert
-            v-if="!todosLosExamenesCargados"
-            type="warning"
-            variant="tonal"
-            density="compact"
-            class="mb-4"
-          >
-            Aún faltan exámenes por cargar ({{ cantidadExamenesCargados }}/{{ tiposExamen.length }}).
-          </VAlert>
-
-          <VRow>
-            <VCol cols="12">
-              <AppSelect
-                v-model="formulario.estado_id"
-                label="Siguiente paso"
-                :items="estadosDisponibles"
-                item-title="nombre"
-                item-value="id"
-              />
-            </VCol>
-            <VCol cols="12">
-              <AppTextField
-                v-model="formulario.puntaje_fase"
-                label="Puntaje de esta fase"
-                type="number"
-              />
-            </VCol>
-            <VCol cols="12">
-              <AppTextarea
-                v-model="formulario.comentario"
-                label="Comentario"
-                maxlength="255"
-                counter
-                rows="3"
-              />
-            </VCol>
-          </VRow>
-        </VCardText>
-
-        <VDivider />
-
-        <VCardActions class="pa-4">
-          <VSpacer />
-          <VBtn
-            variant="text"
-            color="secondary"
-            :disabled="guardando"
-            @click="dialogoDecision = false"
-          >
-            Cancelar
-          </VBtn>
-          <VBtn
-            color="success"
-            variant="elevated"
-            :loading="guardando"
-            :disabled="!formulario.estado_id || !formulario.comentario"
-            @click="guardarDecision"
-          >
-            Confirmar
-          </VBtn>
-        </VCardActions>
-      </VCard>
-    </VDialog>
+      <div class="d-flex justify-end gap-2 mt-4">
+        <VBtn
+          variant="text"
+          color="secondary"
+          :disabled="guardando"
+          @click="dialogoDecision = false"
+        >
+          Cancelar
+        </VBtn>
+        <VBtn
+          color="success"
+          variant="elevated"
+          :loading="guardando"
+          :disabled="!formulario.estado_id || !formulario.comentario"
+          @click="guardarDecision"
+        >
+          Confirmar
+        </VBtn>
+      </div>
+    </ModalBasico>
   </div>
 </template>
