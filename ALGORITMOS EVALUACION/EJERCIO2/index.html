@@ -1,0 +1,227 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Números primos en un rango</title>
+
+  <style>
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      display: grid;
+      min-height: 100vh;
+      place-items: center;
+      margin: 0;
+      padding: 24px;
+      background: radial-gradient(ellipse at top, #e1ebfa, #f4f7fb 65%);
+      color: #172b47;
+      font: 1rem/1.5 system-ui, sans-serif;
+    }
+
+    main {
+      width: min(100%, 760px);
+      padding: clamp(24px, 6vw, 56px);
+      background: #fff;
+      border: 1px solid #dce5f0;
+      border-top: 5px solid #245bb0;
+      border-radius: 20px;
+      box-shadow: 0 20px 48px rgb(23 43 71 / 10%);
+    }
+
+    h1 {
+      margin: 0 0 24px;
+      font-size: clamp(1.85rem, 5vw, 2.75rem);
+      line-height: 1.15;
+      letter-spacing: -0.035em;
+    }
+
+    .campos {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 16px;
+    }
+
+    label {
+      display: block;
+      margin-bottom: 8px;
+      font-weight: 650;
+    }
+
+    input,
+    button {
+      width: 100%;
+      min-height: 56px;
+      padding: 12px 16px;
+      border-radius: 10px;
+      font: inherit;
+    }
+
+    input {
+      border: 1px solid #8b9cb3;
+      color: inherit;
+      font-size: 1.15rem;
+    }
+
+    input[aria-invalid="true"] {
+      border-color: #b42318;
+    }
+
+    button {
+      border: 0;
+      background: #245bb0;
+      color: #fff;
+      font-weight: 650;
+      cursor: pointer;
+    }
+
+    button:hover {
+      background: #18498f;
+    }
+
+    input:focus-visible,
+    button:focus-visible {
+      outline: 3px solid #497ecb;
+      outline-offset: 3px;
+    }
+
+    #rango {
+      margin: 12px 0 20px;
+      color: #4d6079;
+      font-size: 0.95rem;
+    }
+
+    #resultado:not(:empty) {
+      max-height: 240px;
+      overflow: auto;
+      margin-top: 24px;
+      padding: 18px;
+      border: 1px solid #c7daf5;
+      border-radius: 12px;
+      background: #edf4ff;
+      color: #174785;
+      font-size: 1.1rem;
+      font-weight: 600;
+    }
+
+    #resultado[data-error="true"] {
+      border-color: #f2c9c4;
+      background: #fff2f0;
+      color: #9d251c;
+    }
+
+    @media (max-width: 480px) {
+      body {
+        padding: 16px;
+      }
+
+      .campos {
+        grid-template-columns: 1fr;
+      }
+    }
+  </style>
+</head>
+<body>
+  <main>
+    <h1>Números primos en un rango</h1>
+
+    <form id="formulario">
+      <div class="campos">
+        <div>
+          <label for="inicio">Inicio del rango (a)</label>
+          <input id="inicio" type="text" inputmode="numeric" aria-describedby="rango">
+        </div>
+
+        <div>
+          <label for="fin">Fin del rango (b)</label>
+          <input id="fin" type="text" inputmode="numeric" aria-describedby="rango">
+        </div>
+      </div>
+
+      <p id="rango">Ingresá dos enteros que cumplan 1 ≤ a ≤ b ≤ 100 000.</p>
+      <button type="submit">Buscar primos</button>
+    </form>
+
+    <div id="resultado" role="status"></div>
+  </main>
+
+  <script>
+    const formulario = document.querySelector('#formulario');
+    const campoInicio = document.querySelector('#inicio');
+    const campoFin = document.querySelector('#fin');
+    const resultado = document.querySelector('#resultado');
+
+    function leerEntero(campo) {
+      const entrada = campo.value.trim();
+      const numero = Number(entrada);
+
+      if (!/^[+-]?\d+$/.test(entrada) || numero < 1 || numero > 100000) {
+        return null;
+      }
+
+      return numero;
+    }
+
+    function mostrarError(campo, mensaje) {
+      resultado.dataset.error = 'true';
+      resultado.textContent = mensaje;
+      campo.setAttribute('aria-invalid', 'true');
+      campo.focus();
+    }
+
+    function esPrimo(numero) {
+      if (numero < 2) {
+        return false;
+      }
+
+      for (let divisor = 2; divisor * divisor <= numero; divisor++) {
+        if (numero % divisor === 0) {
+          return false;
+        }
+      }
+
+      return true;
+    }
+
+    formulario.addEventListener('submit', (evento) => {
+      evento.preventDefault();
+
+      campoInicio.removeAttribute('aria-invalid');
+      campoFin.removeAttribute('aria-invalid');
+      delete resultado.dataset.error;
+
+      const a = leerEntero(campoInicio);
+      const b = leerEntero(campoFin);
+
+      if (a === null) {
+        mostrarError(campoInicio, 'Ingresá un inicio entero entre 1 y 100 000.');
+        return;
+      }
+
+      if (b === null) {
+        mostrarError(campoFin, 'Ingresá un fin entero entre 1 y 100 000.');
+        return;
+      }
+
+      if (a > b) {
+        mostrarError(campoFin, 'El fin debe ser mayor o igual al inicio.');
+        return;
+      }
+
+      const primos = [];
+
+      for (let numero = a; numero <= b; numero++) {
+        if (esPrimo(numero)) {
+          primos.push(numero);
+        }
+      }
+
+      resultado.textContent = primos.length > 0
+        ? primos.join(', ')
+        : 'No se encontraron números primos';
+    });
+  </script>
+</body>
+</html>

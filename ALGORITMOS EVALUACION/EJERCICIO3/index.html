@@ -1,0 +1,186 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Suma de términos pares de Fibonacci</title>
+
+  <style>
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      display: grid;
+      min-height: 100vh;
+      place-items: center;
+      margin: 0;
+      padding: 24px;
+      background: radial-gradient(ellipse at top, #e1ebfa, #f4f7fb 65%);
+      color: #172b47;
+      font: 1rem/1.5 system-ui, sans-serif;
+    }
+
+    main {
+      width: min(100%, 760px);
+      padding: clamp(24px, 6vw, 56px);
+      background: #fff;
+      border: 1px solid #dce5f0;
+      border-top: 5px solid #245bb0;
+      border-radius: 20px;
+      box-shadow: 0 20px 48px rgb(23 43 71 / 10%);
+    }
+
+    h1 {
+      margin: 0 0 28px;
+      font-size: clamp(1.85rem, 5vw, 2.75rem);
+      line-height: 1.15;
+      letter-spacing: -0.035em;
+    }
+
+    label {
+      display: block;
+      margin-bottom: 8px;
+      font-weight: 650;
+    }
+
+    .controles {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) auto;
+      gap: 12px;
+    }
+
+    input,
+    button {
+      min-height: 56px;
+      padding: 12px 18px;
+      border-radius: 10px;
+      font: inherit;
+    }
+
+    input {
+      width: 100%;
+      border: 1px solid #8b9cb3;
+      color: inherit;
+      font-size: 1.15rem;
+    }
+
+    input[aria-invalid="true"] {
+      border-color: #b42318;
+    }
+
+    button {
+      border: 0;
+      background: #245bb0;
+      color: #fff;
+      font-weight: 650;
+      cursor: pointer;
+    }
+
+    button:hover {
+      background: #18498f;
+    }
+
+    input:focus-visible,
+    button:focus-visible {
+      outline: 3px solid #497ecb;
+      outline-offset: 3px;
+    }
+
+    #rango {
+      margin: 10px 0 0;
+      color: #4d6079;
+    }
+
+    #resultado:not(:empty) {
+      margin-top: 24px;
+      padding: 18px;
+      border: 1px solid #c7daf5;
+      border-radius: 12px;
+      background: #edf4ff;
+      color: #174785;
+      white-space: pre-line;
+      overflow-wrap: anywhere;
+      font-weight: 600;
+    }
+
+    #resultado[data-error="true"] {
+      border-color: #f2c9c4;
+      background: #fff2f0;
+      color: #9d251c;
+    }
+
+    @media (max-width: 480px) {
+      body {
+        padding: 16px;
+      }
+
+      .controles {
+        grid-template-columns: 1fr;
+      }
+    }
+  </style>
+</head>
+<body>
+  <main>
+    <h1>Suma de términos pares de Fibonacci</h1>
+
+    <form id="formulario">
+      <label for="cantidad">Cantidad de términos (n)</label>
+
+      <div class="controles">
+        <input id="cantidad" type="text" inputmode="numeric" aria-describedby="rango">
+        <button type="submit">Calcular</button>
+      </div>
+
+      <p id="rango">Ingresá un número entero entre 2 y 40.</p>
+    </form>
+
+    <div id="resultado" role="status"></div>
+  </main>
+
+  <script>
+    const formulario = document.querySelector('#formulario');
+    const campoCantidad = document.querySelector('#cantidad');
+    const resultado = document.querySelector('#resultado');
+
+    formulario.addEventListener('submit', (evento) => {
+      evento.preventDefault();
+
+      const entrada = campoCantidad.value.trim();
+      const cantidad = Number(entrada);
+
+      if (!/^[+-]?\d+$/.test(entrada) || cantidad < 2 || cantidad > 40) {
+        resultado.dataset.error = 'true';
+        resultado.textContent = 'Ingresá un número entero válido entre 2 y 40.';
+        campoCantidad.setAttribute('aria-invalid', 'true');
+        campoCantidad.focus();
+        return;
+      }
+
+      delete resultado.dataset.error;
+      campoCantidad.removeAttribute('aria-invalid');
+
+      const sucesion = [];
+      let actual = 0;
+      let siguiente = 1;
+      let sumaPares = 0;
+
+      for (let posicion = 0; posicion < cantidad; posicion++) {
+        sucesion.push(actual);
+
+        if (actual % 2 === 0) {
+          sumaPares += actual;
+        }
+
+        const nuevoTermino = actual + siguiente;
+        actual = siguiente;
+        siguiente = nuevoTermino;
+      }
+
+      resultado.textContent =
+        `Sucesión: ${sucesion.join(' ')}\nSuma de pares: ${sumaPares}`;
+    });
+  </script>
+</body>
+</html>

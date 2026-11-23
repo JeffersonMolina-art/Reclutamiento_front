@@ -1,0 +1,174 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Número par o impar</title>
+
+  <style>
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      display: grid;
+      min-height: 100vh;
+      place-items: center;
+      margin: 0;
+      padding: 24px;
+      background: radial-gradient(ellipse at top, #e1ebfa, #f4f7fb 65%);
+      color: #172b47;
+      font: 1rem/1.5 system-ui, sans-serif;
+    }
+
+    main {
+      width: min(100%, 720px);
+      padding: clamp(24px, 6vw, 56px);
+      background: #fff;
+      border: 1px solid #dce5f0;
+      border-top: 5px solid #245bb0;
+      border-radius: 20px;
+      box-shadow: 0 20px 48px rgb(23 43 71 / 10%);
+    }
+
+    h1 {
+      margin: 0 0 32px;
+      font-size: clamp(1.85rem, 5vw, 2.75rem);
+      line-height: 1.15;
+      letter-spacing: -0.035em;
+    }
+
+    label {
+      display: block;
+      margin-bottom: 8px;
+      font-weight: 650;
+    }
+
+    .controles {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) auto;
+      gap: 12px;
+    }
+
+    input,
+    button {
+      min-height: 58px;
+      border-radius: 10px;
+      font: inherit;
+    }
+
+    input {
+      width: 100%;
+      padding: 12px 16px;
+      border: 1px solid #8b9cb3;
+      color: inherit;
+      font-size: 1.2rem;
+    }
+
+    input[aria-invalid="true"] {
+      border-color: #b42318;
+    }
+
+    button {
+      padding: 12px 24px;
+      border: 0;
+      background: #245bb0;
+      color: #fff;
+      font-weight: 650;
+      cursor: pointer;
+    }
+
+    button:hover {
+      background: #18498f;
+    }
+
+    input:focus-visible,
+    button:focus-visible {
+      outline: 3px solid #497ecb;
+      outline-offset: 3px;
+    }
+
+    #rango {
+      margin: 10px 0 0;
+      color: #4d6079;
+      font-size: 0.95rem;
+    }
+
+    #resultado:not(:empty) {
+      display: grid;
+      min-height: 100px;
+      place-items: center;
+      margin-top: 28px;
+      padding: 16px;
+      border: 1px solid #c7daf5;
+      border-radius: 12px;
+      background: #edf4ff;
+      color: #174785;
+      text-align: center;
+      font-size: 2rem;
+      font-weight: 750;
+    }
+
+    #resultado[data-error="true"] {
+      border-color: #f2c9c4;
+      background: #fff2f0;
+      color: #9d251c;
+      font-size: 1rem;
+      font-weight: 600;
+    }
+
+    @media (max-width: 480px) {
+      body {
+        padding: 16px;
+      }
+
+      .controles {
+        grid-template-columns: 1fr;
+      }
+    }
+  </style>
+</head>
+<body>
+  <main>
+    <h1>Número par o impar</h1>
+
+    <form id="formulario">
+      <label for="numero">Número entero</label>
+
+      <div class="controles">
+        <input id="numero" type="text" aria-describedby="rango">
+        <button type="submit">Determinar</button>
+      </div>
+
+      <p id="rango">Ingresá un entero entre −100 000 y 100 000.</p>
+    </form>
+
+    <div id="resultado" role="status"></div>
+  </main>
+
+  <script>
+    const formulario = document.querySelector('#formulario');
+    const campoNumero = document.querySelector('#numero');
+    const resultado = document.querySelector('#resultado');
+
+    formulario.addEventListener('submit', (evento) => {
+      evento.preventDefault();
+
+      const entrada = campoNumero.value.trim();
+      const numero = Number(entrada);
+
+      if (!/^[+-]?\d+$/.test(entrada) || numero < -100000 || numero > 100000) {
+        resultado.dataset.error = 'true';
+        resultado.textContent = 'Ingresá un número entero válido entre −100 000 y 100 000.';
+        campoNumero.setAttribute('aria-invalid', 'true');
+        campoNumero.focus();
+        return;
+      }
+
+      delete resultado.dataset.error;
+      campoNumero.removeAttribute('aria-invalid');
+      resultado.textContent = numero % 2 === 0 ? 'PAR' : 'IMPAR';
+    });
+  </script>
+</body>
+</html>
